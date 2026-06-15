@@ -205,6 +205,7 @@ function subscribeToRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'workers' }, () => pullFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => pullFromSupabase())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'rents' }, () => pullFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => pullFromSupabase())
     .subscribe((status) => {
       console.log('Realtime subscription status:', status);
     });
@@ -229,6 +230,22 @@ async function pullFromSupabase() {
       if (!rErr && rentData) ren = rentData;
     } catch (e) {
       console.warn("Supabase rents table pull failed (might not exist yet):", e);
+    }
+
+    // settings 테이블 풀 시도 (테이블이 없을 수 있으므로 try-catch로 예외 처리)
+    try {
+      const { data: settingsData, error: setErr } = await supabaseClient.from('settings').select('*');
+      if (!setErr && settingsData) {
+        settingsData.forEach(s => {
+          if (s.key && s.key.startsWith('rent_village_name_')) {
+            const vKey = s.key.replace('rent_village_name_', '');
+            rentVillageNames[vKey] = s.value;
+            localStorage.setItem(s.key, s.value);
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("Supabase settings table pull failed (might not exist yet):", e);
     }
 
     state.customers = cust.map(c => ({ id: c.id, name: c.name, phone: c.phone, prices: c.prices, initialDebt: c.initial_debt || 0, initialDebtCollected: c.initial_debt_collected || 0, sortOrder: c.sort_order || 0 }));
@@ -303,7 +320,8 @@ async function pushCustomer(customer) {
       phone: customer.phone,
       prices: customer.prices,
       initial_debt: customer.initialDebt || 0,
-      initial_debt_collected: customer.initialDebtCollected || 0
+      initial_debt_collected: customer.initialDebtCollected || 0,
+      sort_order: customer.sortOrder || 0
     });
   } catch (e) { console.error(e); }
 }
@@ -381,7 +399,7 @@ async function removeAttendanceSupabase(id) {
 async function pushRent(rent) {
   if (!supabaseClient) return;
   try {
-    await supabaseClient.from('rents').upsert({
+    const { error } = await supabaseClient.from('rents').upsert({
       id: rent.id,
       owner_name: rent.ownerName,    // snake_case로 저장 (PostgreSQL 호환)
       phone: rent.phone,
@@ -394,14 +412,46 @@ async function pushRent(rent) {
       notes: rent.notes,
       village: rent.village || '1'
     });
-  } catch (e) { console.error(e); }
+    if (error) {
+      console.error('[pushRent] Supabase 저장 오류:', error);
+      showToast(`임대료 저장 실패: ${error.message}`, 'error');
+      throw error;
+    }
+  } catch (e) {
+    console.error('[pushRent] 예외 발생:', e);
+    throw e;
+  }
 }
 
 async function removeRentSupabase(id) {
   if (!supabaseClient) return;
   try {
-    await supabaseClient.from('rents').delete().eq('id', id);
-  } catch (e) { console.error(e); }
+    const { error } = await supabaseClient.from('rents').delete().eq('id', id);
+    if (error) {
+      console.error('[removeRentSupabase] Supabase 삭제 오류:', error);
+      throw error;
+    }
+  } catch (e) {
+    console.error('[removeRentSupabase] 예외 발생:', e);
+    throw e;
+  }
+}
+
+async function pushSetting(key, value) {
+  if (!supabaseClient) return;
+  try {
+    const { error } = await supabaseClient.from('settings').upsert({
+      key: key,
+      value: value
+    });
+    if (error) {
+      console.error('[pushSetting] Supabase 설정 저장 오류:', error);
+      throw error;
+    }
+  } catch (e) {
+    console.error('[pushSetting] 예외 발생:', e);
+    throw e;
+  }
 }
 
 // 2. Authentication UI & Logic
@@ -1364,7 +1414,7 @@ function renderRent() {
 }
 
 // Rent Actions
-function addRent(ownerName, phone, address, area, amount, bankAccount, yearlyPayments, paymentDate, notes) {
+async function addRent(ownerName, phone, address, area, amount, bankAccount, yearlyPayments, paymentDate, notes) {
   const id = 'rent-' + Date.now();
   const currentVillage = rentFilters.village || '1';
   const newRent = {
@@ -1382,9 +1432,17 @@ function addRent(ownerName, phone, address, area, amount, bankAccount, yearlyPay
   };
   state.rents.push(newRent);
   saveState();
-  pushRent(newRent);
   renderAll();
+  try {
+    await pushRent(newRent);
+    if (supabaseClient) {
+      showToast('임대료 계약이 저장되었습니다.', 'success');
+    }
+  } catch (e) {
+    console.error('[addRent] Supabase 저장 실패, 로컬 데이터는 유지됩니다:', e);
+  }
 }
+
 
 window.toggleRentPrintRow = function(checkbox) {
   const rentId = checkbox.dataset.rentId;
@@ -1423,16 +1481,26 @@ window.toggleAllRentPrintChecks = function(headerCheckbox) {
   });
 };
 
-window.deleteRent = function(id) {
+window.deleteRent = async function(id) {
   if (confirm('이 임대 계약 내역을 삭제하시겠습니까?')) {
+    const originalRents = [...state.rents];
     state.rents = state.rents.filter(r => r.id !== id);
     saveState();
-    removeRentSupabase(id);
     renderAll();
+    
+    try {
+      await removeRentSupabase(id);
+      showToast('임대 내역이 성공적으로 삭제되었습니다.');
+    } catch (e) {
+      showToast('서버 저장 실패: 삭제 처리를 롤백합니다.');
+      state.rents = originalRents;
+      saveState();
+      renderAll();
+    }
   }
 };
 
-window.toggleRentYear = function(id, year) {
+window.toggleRentYear = async function(id, year) {
   const rent = state.rents.find(r => r.id === id);
   if (rent) {
     if (!rent.yearlyPayments) rent.yearlyPayments = {};
@@ -1441,10 +1509,15 @@ window.toggleRentYear = function(id, year) {
       rent.paymentDate = new Date().toISOString().split('T')[0];
     }
     saveState();
-    pushRent(rent);
     renderAll();
+    try {
+      await pushRent(rent);
+    } catch (e) {
+      console.error('[toggleRentYear] Supabase 저장 실패:', e);
+    }
   }
 };
+
 
 window.openRentEditModal = function(id) {
   const rent = state.rents.find(r => r.id === id);
@@ -1480,6 +1553,48 @@ function renderAll() {
   renderSales();
   renderAttendance();
   renderRent();
+}
+
+// 토스트 알림 유틸리티 함수
+function showToast(message, type = 'info') {
+  const existing = document.getElementById('zandi-toast');
+  if (existing) existing.remove();
+  
+  const toast = document.createElement('div');
+  toast.id = 'zandi-toast';
+  const bgColor = type === 'error' ? '#dc2626' : type === 'success' ? '#059669' : '#374151';
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    padding: 12px 18px;
+    border-radius: 12px;
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    background: ${bgColor};
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.3s ease;
+    max-width: 320px;
+    word-break: break-word;
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  });
+  
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(8px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
 }
 
 // 5. Actions & Mutation Event Listeners
@@ -2153,8 +2268,9 @@ function initForms() {
 
   // 11.5) Land Rent Register Form & Filters
   const rentForm = document.getElementById('rent-form');
+  const rentRegisterModal = document.getElementById('rent-register-modal');
   if (rentForm) {
-    rentForm.addEventListener('submit', (e) => {
+    rentForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const ownerName = document.getElementById('rent-owner-name').value.trim();
       const phone = document.getElementById('rent-phone').value.trim();
@@ -2173,10 +2289,15 @@ function initForms() {
       const paymentDate = document.getElementById('rent-pay-date').value;
       const notes = document.getElementById('rent-notes').value.trim();
 
-      addRent(ownerName, phone, address, area, amount, bankAccount, yearlyPayments, paymentDate, notes);
+      await addRent(ownerName, phone, address, area, amount, bankAccount, yearlyPayments, paymentDate, notes);
       
       rentForm.reset();
       document.getElementById('rent-pay-date').value = '';
+      
+      // 등록 완료 후 모달 닫기
+      if (rentRegisterModal) {
+        rentRegisterModal.classList.add('hidden');
+      }
     });
   }
 
@@ -2290,21 +2411,33 @@ function initForms() {
   // 2) 동네 이름 수정 팝업 리스너
   const renameVillageBtn = document.getElementById('btn-rename-village');
   if (renameVillageBtn) {
-    renameVillageBtn.addEventListener('click', () => {
+    renameVillageBtn.addEventListener('click', async () => {
       const currentVillage = rentFilters.village || '1';
       const oldName = rentVillageNames[currentVillage];
       const newName = prompt(`선택한 ${currentVillage}동네의 이름을 입력해 주세요:`, oldName);
       if (newName !== null && newName.trim() !== '') {
-        rentVillageNames[currentVillage] = newName.trim();
-        localStorage.setItem(`rent_village_name_${currentVillage}`, newName.trim());
+        const tempName = newName.trim();
+        const originalName = oldName;
+        
+        // 로컬 즉시 반영
+        rentVillageNames[currentVillage] = tempName;
+        localStorage.setItem(`rent_village_name_${currentVillage}`, tempName);
         renderRent();
+        
+        try {
+          await pushSetting(`rent_village_name_${currentVillage}`, tempName);
+        } catch (e) {
+          showToast('동네 이름 저장 실패: 서버에 반영되지 않았습니다. 롤백합니다.');
+          rentVillageNames[currentVillage] = originalName;
+          localStorage.setItem(`rent_village_name_${currentVillage}`, originalName);
+          renderRent();
+        }
       }
     });
   }
 
   // 3) 토지 임대료 계약 등록 팝업 열기 / 닫기
   const openRentRegisterBtn = document.getElementById('btn-open-rent-register');
-  const rentRegisterModal = document.getElementById('rent-register-modal');
   const closeRentRegisterModalBtn = document.getElementById('close-rent-register-modal-btn');
 
   if (openRentRegisterBtn && rentRegisterModal) {
@@ -2316,16 +2449,6 @@ function initForms() {
   if (closeRentRegisterModalBtn && rentRegisterModal) {
     closeRentRegisterModalBtn.addEventListener('click', () => {
       rentRegisterModal.classList.add('hidden');
-    });
-  }
-
-  // rentForm submit 시 등록 모달도 함께 닫아주기 추가
-  if (rentForm) {
-    // 기존 리스너 내부에 모달 닫기 코드 삽입을 위해 submit 재정의
-    rentForm.addEventListener('submit', () => {
-      if (rentRegisterModal) {
-        rentRegisterModal.classList.add('hidden');
-      }
     });
   }
 
@@ -2358,12 +2481,20 @@ function initForms() {
       rent.notes = document.getElementById('edit-rent-notes').value.trim();
       
       saveState();
-      await pushRent(rent);
       renderAll();
-      
       document.getElementById('rent-edit-modal').classList.add('hidden');
+      
+      try {
+        await pushRent(rent);
+        if (supabaseClient) {
+          showToast('임대료 정보가 수정되었습니다.', 'success');
+        }
+      } catch (e) {
+        console.error('[editRentForm] Supabase 수정 실패, 로컬 데이터는 유지됩니다:', e);
+      }
     });
   }
+
 
   const closeRentEditModalBtn = document.getElementById('close-rent-edit-modal-btn');
   if (closeRentEditModalBtn) {
