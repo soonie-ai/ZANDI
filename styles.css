@@ -664,4 +664,9 @@ input, select, textarea {
     width: auto !important;
     height: auto !important;
   }
+
+  /* 인쇄에서 제외할 핵심 항목 외의 칼럼 숨김 처리 */
+  .print-hide {
+    display: none !important;
+  }
 }

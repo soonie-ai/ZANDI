@@ -1190,29 +1190,29 @@ function renderRent() {
         <td class="p-3 text-white font-medium pl-2">${rent.ownerName || '-'}</td>
         <td class="p-3 text-gray-300">${rent.phone || '-'}</td>
         <td class="p-3 text-gray-300 max-w-[150px] truncate" title="${rent.address || ''}">${rent.address || '-'}</td>
-        <td class="p-3 text-center text-gray-300">${rent.area ? rent.area + '평' : '-'}</td>
+        <td class="p-3 text-center text-gray-300 print-hide">${rent.area ? rent.area + '평' : '-'}</td>
         <td class="p-3 text-right text-emerald-400 font-bold">${Number(rent.amount).toLocaleString()}원</td>
         <td class="p-3 text-gray-300 max-w-[120px] truncate" title="${rent.bankAccount || ''}">${rent.bankAccount || '-'}</td>
-        <td class="p-3 text-center">
+        <td class="p-3 text-center print-hide">
           <label class="custom-checkbox inline-block">
             <input type="checkbox" ${payPrev ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '${yearPrev}')">
             <span class="checkmark"></span>
           </label>
         </td>
-        <td class="p-3 text-center">
+        <td class="p-3 text-center print-hide">
           <label class="custom-checkbox inline-block">
             <input type="checkbox" ${payCurr ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '${yearCurr}')">
             <span class="checkmark"></span>
           </label>
         </td>
-        <td class="p-3 text-center">
+        <td class="p-3 text-center print-hide">
           <label class="custom-checkbox inline-block">
             <input type="checkbox" ${payNext ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '${yearNext}')">
             <span class="checkmark"></span>
           </label>
         </td>
-        <td class="p-3 text-gray-400">${rent.paymentDate || '-'}</td>
-        <td class="p-3 text-gray-400 max-w-[120px] truncate" title="${rent.notes || ''}">${rent.notes || '-'}</td>
+        <td class="p-3 text-gray-400 print-hide">${rent.paymentDate || '-'}</td>
+        <td class="p-3 text-gray-400 max-w-[120px] truncate print-hide" title="${rent.notes || ''}">${rent.notes || '-'}</td>
         <td class="p-3 text-center no-print">
           <div class="flex items-center justify-center gap-1.5">
             <button onclick="openRentEditModal('${rent.id}')" class="text-emerald-400 hover:text-emerald-300 p-1">
