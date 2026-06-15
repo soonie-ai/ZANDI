@@ -253,9 +253,9 @@ async function pullFromSupabase() {
       isPaid: a.is_paid 
     }));
     if (ren && ren.length > 0) {
+      // Supabase에 데이터가 있으면 → Supabase 데이터로 state 업데이트
       state.rents = ren.map(r => ({
         id: r.id,
-        // snake_case 우선, camelCase fallback (기존 데이터 호환)
         ownerName: r.owner_name || r.ownerName || '',
         phone: r.phone || '',
         address: r.address || '',
@@ -267,6 +267,24 @@ async function pullFromSupabase() {
         notes: r.notes || '',
         village: r.village || '1'
       }));
+
+      // 로컬에만 있고 Supabase에 없는 항목 → 자동 업로드 (누락 데이터 보완)
+      const supabaseIds = new Set(ren.map(r => r.id));
+      const localOnly = (JSON.parse(localStorage.getItem('zandi_state') || '{}').rents || [])
+        .filter(r => !supabaseIds.has(r.id));
+      if (localOnly.length > 0) {
+        console.log(`[AutoSync] Supabase에 없는 로컬 데이터 ${localOnly.length}건 자동 업로드...`);
+        for (const rent of localOnly) {
+          await pushRent(rent);
+        }
+      }
+    } else if (state.rents && state.rents.length > 0) {
+      // Supabase가 완전히 비어있고 로컬에 데이터가 있으면 → 전체 초기 업로드
+      console.log(`[AutoSync] 초기 동기화: 로컬 데이터 ${state.rents.length}건 업로드...`);
+      for (const rent of state.rents) {
+        await pushRent(rent);
+      }
+      console.log('[AutoSync] 초기 업로드 완료!');
     }
 
     saveState();
