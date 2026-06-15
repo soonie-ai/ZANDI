@@ -349,13 +349,15 @@ input, select, textarea {
 
   /* 하단 소유주/로그아웃 영역 -> 상단 헤더 우측으로 */
   aside > div:last-child {
-    flex-shrink: 0;
-    margin-left: auto;
+    flex-shrink: 0 !important;
+    margin-left: auto !important;
     border-top: none !important;
     flex-direction: row !important;
     padding: 0 !important;
-    align-items: center;
-    gap: 8px;
+    align-items: center !important;
+    gap: 6px !important;
+    display: flex !important;
+    min-width: 0 !important;
   }
 
   /* 소유주 정보 간소화 */
@@ -367,35 +369,41 @@ input, select, textarea {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    gap: 8px !important;
+    gap: 6px !important;
     margin: 0 !important;
+    flex-shrink: 0 !important;
   }
 
   #sidebar-settings-btn {
-    height: 32px !important;
+    height: 28px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     background: rgba(46, 204, 113, 0.15) !important;
     border: 1px solid rgba(46, 204, 113, 0.3) !important;
-    border-radius: 8px !important;
+    border-radius: 6px !important;
     color: #2ecc71 !important;
-    padding: 0 10px !important;
-    font-size: 11px !important;
+    padding: 0 6px !important;
+    font-size: 10px !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
   }
   #sidebar-settings-btn span {
     display: inline-block !important;
-    font-size: 11px !important;
+    font-size: 10px !important;
+    white-space: nowrap !important;
   }
 
   /* 실시간 연동 표시등 모바일 최적화 */
   #sync-indicator {
-    padding: 4px 8px !important;
+    padding: 3px 6px !important;
     font-size: 9px !important;
-    border-radius: 8px !important;
+    border-radius: 6px !important;
     background: rgba(255, 255, 255, 0.03) !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     color: var(--text-secondary) !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
   }
 
   /* 메인 컨텐츠: 상하단 여백 확보 */
