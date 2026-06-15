@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZANDI - 잔디 재배 1인 경영 장부</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            zandiBg: '#080f0c',
+            zandiSurface: 'rgba(18, 30, 24, 0.65)',
+            zandiBorder: 'rgba(46, 204, 113, 0.15)',
+            zandiPrimary: '#2ecc71',
+            zandiPrimaryHover: '#27ae60',
+            zandiTextMuted: '#6b7e75'
+          }
+        }
+      }
+    }
+  </script>
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-zandiBg min-h-screen text-slate-100 flex flex-col relative">
+
+  <!-- 1. Passcode / Login Screen Overlay -->
+  <div id="login-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xl">
+    <div class="glass-panel p-8 max-w-sm w-full mx-4 text-center border border-zandiBorder/40">
+      <div class="flex justify-center mb-4 text-zandiPrimary animate-pulse">
+        <i data-lucide="lock" class="w-12 h-12"></i>
+      </div>
+      <h2 class="text-2xl font-bold mb-2 tracking-wide">ZANDI LEDGER</h2>
+      <p class="text-sm text-slate-400 mb-6">1인 사장님 전용 보안 로그인</p>
+      
+      <div class="mb-4">
+        <input type="password" id="password-input" placeholder="비밀번호 입력 (기본: 1234)" 
+          class="w-full bg-black/40 border border-zandiBorder text-center text-xl tracking-widest text-zandiPrimary rounded-xl py-3 px-4 focus:outline-none focus:border-zandiPrimary focus:ring-1 focus:ring-zandiPrimary transition-all duration-300">
+        <p id="login-error" class="text-rose-400 text-xs mt-2 hidden">비밀번호가 일치하지 않습니다.</p>
+      </div>
+
+      <button id="login-btn" class="w-full btn-primary justify-center py-3 text-base">
+        로그인 <i data-lucide="log-in" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- 2. Main Dashboard Application Container -->
+  <div id="main-app" class="flex-1 flex flex-col md:flex-row transition-all duration-500 opacity-5 pointer-events-none">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="w-full md:w-64 bg-black/35 backdrop-blur-md border-r border-zandiBorder flex flex-col p-6 space-y-8">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-black shadow-lg shadow-zandiPrimary/20">
+          <i data-lucide="sprout" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold leading-none text-white tracking-wide">잔디 장부</h1>
+          <span class="text-xs text-zandiPrimary font-semibold">ZANDI LEDGER</span>
+        </div>
+      </div>
+
+      <nav class="flex-1 flex flex-col space-y-1">
+        <button data-section="dashboard" class="nav-tab flex items-center space-x-3 w-full py-3 px-4 rounded-xl text-left bg-surface-hover border-l-4 border-primary text-primary transition-all duration-300">
+          <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+          <span class="font-medium text-sm">대시보드</span>
+        </button>
+        <button data-section="customers" class="nav-tab flex items-center space-x-3 w-full py-3 px-4 rounded-xl text-left text-slate-400 hover:bg-black/20 hover:text-white transition-all duration-300">
+          <i data-lucide="users" class="w-5 h-5"></i>
+          <span class="font-medium text-sm">거래처 관리</span>
+        </button>
+        <button data-section="sales" class="nav-tab flex items-center space-x-3 w-full py-3 px-4 rounded-xl text-left text-slate-400 hover:bg-black/20 hover:text-white transition-all duration-300">
+          <i data-lucide="banknote" class="w-5 h-5"></i>
+          <span class="font-medium text-sm">잔디 판매대장</span>
+        </button>
+        <button data-section="attendance" class="nav-tab flex items-center space-x-3 w-full py-3 px-4 rounded-xl text-left text-slate-400 hover:bg-black/20 hover:text-white transition-all duration-300">
+          <i data-lucide="calendar-check" class="w-5 h-5"></i>
+          <span class="font-medium text-sm">인부 출근대장</span>
+        </button>
+        <button data-section="rent" class="nav-tab flex items-center space-x-3 w-full py-3 px-4 rounded-xl text-left text-slate-400 hover:bg-black/20 hover:text-white transition-all duration-300">
+          <i data-lucide="home" class="w-5 h-5"></i>
+          <span class="font-medium text-sm">토지 임대료 관리</span>
+        </button>
+      </nav>
+
+      <div class="border-t border-zandiBorder/40 pt-4 flex flex-col space-y-4">
+        <!-- 소유주/사용자명 및 설정 기어 버튼 영역 -->
+        <div class="glass-panel p-3 bg-black/40 border border-zandiBorder/30 rounded-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+              <div class="w-8 h-8 rounded-full bg-emerald-950 border border-zandiPrimary/40 flex items-center justify-center text-[10px] text-zandiPrimary font-bold flex-shrink-0" id="owner-avatar">
+                社
+              </div>
+              <div class="flex-1 min-w-0">
+                <input type="text" id="owner-name-input" value="소유주 사장님" 
+                  class="bg-transparent border-b border-transparent hover:border-zandiBorder focus:border-zandiPrimary text-xs font-semibold text-white w-full focus:outline-none transition-all duration-300 py-0.5" 
+                  title="클릭하여 이름 수정 가능">
+                <span class="text-[9px] text-zandiTextMuted block truncate">장부 사용중</span>
+              </div>
+            </div>
+            <!-- 설정 기어 버튼 -->
+            <button id="sidebar-settings-btn" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-all duration-300" title="부부 연동 및 비밀번호 설정">
+              <i data-lucide="settings" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <button id="logout-btn" class="flex items-center justify-center space-x-2 w-full py-2 px-4 rounded-lg bg-rose-950/20 text-rose-400 hover:bg-rose-950/40 text-xs font-medium border border-rose-500/10 transition-all duration-300">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span>안전 로그아웃</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 p-6 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full space-y-6">
+      
+      <!-- Top header with clock and status -->
+      <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-zandiBorder/20 gap-4">
+        <div>
+          <h2 class="text-2xl font-bold tracking-tight">잔디 경영 상태 현황</h2>
+          <p class="text-xs text-slate-400 mt-1">현장 판매 단가 및 인건비 실시간 모니터링</p>
+        </div>
+        <div class="flex items-center space-x-4">
+          <div class="text-right hidden sm:block">
+            <p class="text-xs text-zandiTextMuted">실시간 서버 동기화</p>
+            <span class="text-xs text-zandiPrimary font-semibold flex items-center justify-end gap-1">
+              <span class="w-2 h-2 rounded-full bg-zandiPrimary animate-ping"></span> 로컬 스토리지 보관중
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <!-- ================= SECTION 1: DASHBOARD ================= -->
+      <section id="dashboard-section" class="content-section space-y-6">
+        <!-- 3-Card Summary Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Card 1: Sales Summary -->
+          <div class="glass-panel p-6 flex flex-col justify-between relative overflow-hidden group">
+            <div class="absolute -right-4 -bottom-4 text-emerald-500/5 transition-transform duration-500 group-hover:scale-110">
+              <i data-lucide="trending-up" class="w-32 h-32"></i>
+            </div>
+            <div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-zandiTextMuted">이번 달 총 매출</span>
+              <p id="dash-total-sales" class="text-3xl font-bold text-white mt-2">0원</p>
+            </div>
+            <div class="mt-6 flex justify-between border-t border-zandiBorder/20 pt-4 text-xs">
+              <div>
+                <p class="text-emerald-400 font-semibold" id="dash-collected-sales">0원</p>
+                <span class="text-[10px] text-zandiTextMuted">수금완료</span>
+              </div>
+              <div class="text-right">
+                <p class="text-rose-400 font-semibold" id="dash-uncollected-sales">0원</p>
+                <span class="text-[10px] text-zandiTextMuted">미수금</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Labor Cost Summary -->
+          <div class="glass-panel p-6 flex flex-col justify-between relative overflow-hidden group">
+            <div class="absolute -right-4 -bottom-4 text-rose-500/5 transition-transform duration-500 group-hover:scale-110">
+              <i data-lucide="users" class="w-32 h-32"></i>
+            </div>
+            <div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-zandiTextMuted">이번 달 총 인건비 지출</span>
+              <p id="dash-total-labor" class="text-3xl font-bold text-white mt-2">0원</p>
+            </div>
+            <div class="mt-6 flex justify-between border-t border-zandiBorder/20 pt-4 text-xs">
+              <div>
+                <p class="text-emerald-400 font-semibold" id="dash-paid-labor">0원</p>
+                <span class="text-[10px] text-zandiTextMuted">지급완료</span>
+              </div>
+              <div class="text-right">
+                <p class="text-rose-400 font-semibold" id="dash-unpaid-labor">0원</p>
+                <span class="text-[10px] text-zandiTextMuted">미지급</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Net Profit -->
+          <div class="glass-panel p-6 flex flex-col justify-between relative overflow-hidden group border border-zandiPrimary/20">
+            <div class="absolute -right-4 -bottom-4 text-emerald-400/10 transition-transform duration-500 group-hover:scale-110">
+              <i data-lucide="sprout" class="w-32 h-32"></i>
+            </div>
+            <div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-zandiTextMuted">예상 순이익 (매출 - 인건비)</span>
+              <p id="dash-net-profit" class="text-3xl font-bold text-zandiPrimary mt-2">0원</p>
+            </div>
+            <div class="mt-6 border-t border-zandiBorder/20 pt-4">
+              <div class="w-full bg-black/40 h-2 rounded-full overflow-hidden">
+                <div class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full w-[75%] rounded-full shadow-lg shadow-zandiPrimary/40"></div>
+              </div>
+              <div class="flex justify-between items-center mt-2 text-[10px] text-zandiTextMuted">
+                <span>정상 손익분기 도달</span>
+                <span class="text-zandiPrimary font-bold">목표 달성중</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 대시보드 시각화 및 미수금 현황 병렬 배치 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- 대시보드 출하 달력 시각화 -->
+          <div class="glass-panel p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2 border-b border-zandiBorder/20 pb-3">
+              <div>
+                <h3 class="text-base font-semibold text-white">이달의 잔디 출하 현황 달력</h3>
+                <p class="text-xs text-zandiTextMuted">날짜를 클릭하면 해당일의 상세 출하/납품 내역이 나타납니다.</p>
+              </div>
+              <!-- 달력 컨트롤러 -->
+              <div class="flex items-center space-x-2 text-xs">
+                <button type="button" id="btn-dash-cal-prev" class="btn-secondary py-1 px-2.5 text-xs"><i data-lucide="chevron-left" class="w-3.5 h-3.5"></i></button>
+                <span id="dash-cal-month-title" class="font-bold text-white min-w-[90px] text-center text-xs">2026년 6월</span>
+                <button type="button" id="btn-dash-cal-next" class="btn-secondary py-1 px-2.5 text-xs"><i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+              </div>
+            </div>
+            <!-- 달력 그리드 -->
+            <div class="min-w-[320px]">
+              <!-- 요일 헤더 -->
+              <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-zandiTextMuted mb-2">
+                <div class="text-rose-400">일</div>
+                <div>월</div>
+                <div>화</div>
+                <div>수</div>
+                <div>목</div>
+                <div>금</div>
+                <div class="text-sky-400">토</div>
+              </div>
+              <!-- 날짜 셀들 -->
+              <div id="dash-calendar-grid" class="grid grid-cols-7 gap-1.5 min-h-[280px]">
+                <!-- Dynamically populated via JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- 미수금 발생 거래처 목록 -->
+          <div class="glass-panel p-6 overflow-x-auto">
+            <div class="flex justify-between items-center mb-4">
+              <div>
+                <h3 class="text-base font-semibold text-white">미납금 발생 거래처 현황</h3>
+                <p class="text-xs text-rose-400 font-medium">※ 미수금이 잔존하는 거래처 목록입니다.</p>
+              </div>
+            </div>
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="text-zandiTextMuted border-b border-zandiBorder/40">
+                  <th class="pb-2">거래처명</th>
+                  <th class="pb-2">연락처</th>
+                  <th class="pb-2 text-right">총 미납금액</th>
+                  <th class="pb-2 text-center">장부확인</th>
+                </tr>
+              </thead>
+              <tbody id="unpaid-customers-list">
+                <!-- Dynamically populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION 2: CUSTOMERS ================= -->
+      <section id="customers-section" class="content-section space-y-6 hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Customer Registration Form -->
+          <div class="glass-panel p-6">
+            <h3 class="text-base font-semibold text-white mb-4">거래처 신규 등록</h3>
+            <form id="customer-form" class="space-y-4">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">거래처 이름 *</label>
+                <input type="text" id="cust-name" placeholder="예: 한양수목원" required
+                  class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">연락처</label>
+                <input type="text" id="cust-phone" placeholder="예: 010-1234-5678"
+                  class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+              </div>
+              <div class="border-t border-zandiBorder/20 pt-3">
+                <span class="block text-xs font-semibold text-slate-300 mb-2">잔디 규격별 단가 설정 (원)</span>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <label class="block text-slate-400 mb-1">1818 단가</label>
+                    <input type="number" id="cust-price-1818" placeholder="0" class="w-full bg-black/40 border border-zandiBorder text-white rounded py-1.5 px-2 focus:outline-none focus:border-zandiPrimary">
+                  </div>
+                  <div>
+                    <label class="block text-slate-400 mb-1">1818톤 단가</label>
+                    <input type="number" id="cust-price-1818t" placeholder="0" class="w-full bg-black/40 border border-zandiBorder text-white rounded py-1.5 px-2 focus:outline-none focus:border-zandiPrimary">
+                  </div>
+                  <div>
+                    <label class="block text-slate-400 mb-1">3030 단가</label>
+                    <input type="number" id="cust-price-3030" placeholder="0" class="w-full bg-black/40 border border-zandiBorder text-white rounded py-1.5 px-2 focus:outline-none focus:border-zandiPrimary">
+                  </div>
+                  <div>
+                    <label class="block text-slate-400 mb-1">3030톤 단가</label>
+                    <input type="number" id="cust-price-3030t" placeholder="0" class="w-full bg-black/40 border border-zandiBorder text-white rounded py-1.5 px-2 focus:outline-none focus:border-zandiPrimary">
+                  </div>
+                  <div>
+                    <label class="block text-slate-400 mb-1">4060 단가</label>
+                    <input type="number" id="cust-price-4060" placeholder="0" class="w-full bg-black/40 border border-zandiBorder text-white rounded py-1.5 px-2 focus:outline-none focus:border-zandiPrimary">
+                  </div>
+                  <div>
+                    <label class="block text-slate-400 mb-1">평당 단가</label>
+                    <input type="number" id="cust-price-pyeong" placeholder="0" class="w-full bg-black/40 border border-zandiBorder text-white rounded py-1.5 px-2 focus:outline-none focus:border-zandiPrimary">
+                  </div>
+                  <div class="col-span-2">
+                    <label class="block text-slate-400 mb-1">여유분 (기타 단가)</label>
+                    <input type="number" id="cust-price-extra" placeholder="0" class="w-full bg-black/40 border border-zandiBorder text-white rounded py-1.5 px-2 focus:outline-none focus:border-zandiPrimary">
+                  </div>
+                </div>
+              </div>
+              <button type="submit" class="w-full btn-primary justify-center text-sm py-2">
+                거래처 추가 <i data-lucide="plus" class="w-4 h-4"></i>
+              </button>
+            </form>
+          </div>
+
+          <!-- Customer List Table -->
+          <div class="glass-panel p-6 lg:col-span-2 overflow-x-auto">
+            <h3 class="text-base font-semibold text-white mb-4">등록된 거래처 현황</h3>
+            <table class="w-full text-left text-sm min-w-[500px]">
+              <thead>
+                <tr class="text-xs text-zandiTextMuted border-b border-zandiBorder/40">
+                  <th class="pb-2">거래처명</th>
+                  <th class="pb-2">연락처</th>
+                  <th class="pb-2">지정 잔디단가</th>
+                  <th class="pb-2">누적 거래금액</th>
+                  <th class="pb-2">현재 미수금</th>
+                  <th class="pb-2 text-center">작업</th>
+                </tr>
+              </thead>
+              <tbody id="customer-list">
+                <!-- Dynamically populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION 3: SALES ================= -->
+      <section id="sales-section" class="content-section space-y-6 hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Log Sales Form -->
+          <div class="glass-panel p-6">
+            <h3 class="text-base font-semibold text-white mb-4">잔디 판매 등록</h3>
+            <form id="sale-form" class="space-y-4">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">거래처 선택 *</label>
+                <select id="sale-customer" required
+                  class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+                  <!-- JS dynamically populates -->
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">판매 일자 *</label>
+                <div class="relative date-input-container">
+                  <input type="date" id="sale-date" required
+                    class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 pl-3 pr-10 focus:outline-none focus:border-zandiPrimary text-sm cursor-pointer">
+                  <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-emerald-400">
+                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 다중 품목 추가 구역 -->
+              <div class="border-t border-zandiBorder/20 pt-3">
+                <div class="flex justify-between items-center mb-2">
+                  <span class="block text-xs font-semibold text-slate-300">판매 품목 설정</span>
+                  <button type="button" id="add-sale-item-btn" class="text-xs text-zandiPrimary hover:text-emerald-400 flex items-center gap-1 font-semibold">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> 품목 추가
+                  </button>
+                </div>
+                
+                <!-- 품목 동적 추가 컨테이너 -->
+                <div id="sale-items-container" class="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                  <!-- JS가 첫 줄 및 추가 줄들을 여기에 동적으로 생성합니다. -->
+                </div>
+              </div>
+
+              <div class="border-t border-zandiBorder/20 pt-3 flex justify-between items-center text-xs font-semibold text-slate-300">
+                <span>합계 금액:</span>
+                <span id="sale-items-total" class="text-zandiPrimary text-base font-bold">0원</span>
+              </div>
+
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">수금액 (받은 돈) *</label>
+                <div class="flex items-center gap-2">
+                  <input type="number" id="sale-collected-amount" placeholder="0" required
+                    class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+                  <button type="button" id="btn-fill-full-payment" class="btn-secondary text-[11px] py-2 px-2 whitespace-nowrap">완납 적용</button>
+                </div>
+                <p class="text-[10px] text-slate-500 mt-1">※ 거래액 중 입금받은 일부 금액만 먼저 적으실 수 있습니다.</p>
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">작업 메모 (예: 2.5톤 한 차 출하 등)</label>
+                <input type="text" id="sale-notes" placeholder="현장 비고 또는 추가 사항"
+                  class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+              </div>
+              <button type="submit" class="w-full btn-primary justify-center text-sm py-2">
+                판매 장부 등록 <i data-lucide="plus" class="w-4 h-4"></i>
+              </button>
+            </form>
+          </div>
+
+          <!-- Sales Records Table with Advanced Filters -->
+          <div class="glass-panel p-6 lg:col-span-2 space-y-4">
+            <h3 class="text-base font-semibold text-white">잔디 출하 및 판매 대장</h3>
+            
+            <!-- 필터 컨트롤 레이아웃 -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 rounded-xl bg-black/25 border border-zandiBorder/20 text-xs">
+              <div>
+                <label class="block text-slate-400 mb-1">거래처 필터</label>
+                <select id="filter-sale-customer" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
+                  <option value="">전체 거래처</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">규격 필터</label>
+                <select id="filter-sale-type" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
+                  <option value="">전체 규격</option>
+                  <option value="pyeong">평당</option>
+                  <option value="1818">1818</option>
+                  <option value="1818t">1818 톤</option>
+                  <option value="3030">3030</option>
+                  <option value="3030t">3030 톤</option>
+                  <option value="4060">4060</option>
+                  <option value="extra">여유분 (기타)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">시작 날짜</label>
+                <div class="relative date-input-container">
+                  <input type="date" id="filter-sale-start" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 pr-9 focus:outline-none focus:border-zandiPrimary cursor-pointer">
+                  <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-emerald-400">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">종료 날짜</label>
+                <div class="relative date-input-container">
+                  <input type="date" id="filter-sale-end" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 pr-9 focus:outline-none focus:border-zandiPrimary cursor-pointer">
+                  <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-emerald-400">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 필터 통계 정보 -->
+            <div class="flex flex-wrap gap-4 items-center justify-between p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/10 text-xs text-gray-300">
+              <div class="flex flex-wrap gap-x-6 gap-y-1">
+                <span>선택 필터 합계:</span>
+                <span>건수: <strong class="text-white" id="filter-total-count">0건</strong></span>
+                <span>총 수량합: <strong class="text-zandiPrimary" id="filter-total-qty">0</strong></span>
+                <span>총 거래액: <strong class="text-emerald-400 font-bold" id="filter-total-amount">0원</strong></span>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm min-w-[650px]">
+                <thead>
+                  <tr class="text-xs text-zandiTextMuted border-b border-zandiBorder/40">
+                    <th class="pb-2">일자</th>
+                    <th class="pb-2">거래처</th>
+                    <th class="pb-2">규격</th>
+                    <th class="pb-2 text-right">수량</th>
+                    <th class="pb-2 text-right">단가</th>
+                    <th class="pb-2 text-right">총 거래액</th>
+                    <th class="pb-2 text-center">수금 상태</th>
+                    <th class="pb-2">메모</th>
+                    <th class="pb-2 text-center">삭제</th>
+                  </tr>
+                </thead>
+                <tbody id="sales-list">
+                  <!-- Dynamically populated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION 4: ATTENDANCE ================= -->
+      <section id="attendance-section" class="content-section space-y-6 hidden">
+        <!-- Add Workers & Log attendance -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="space-y-6">
+            <!-- 1. Register Worker -->
+            <div class="glass-panel p-6">
+              <h3 class="text-base font-semibold text-white mb-4">인부 등록</h3>
+              <form id="worker-form" class="space-y-4">
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">인부 이름 *</label>
+                  <input type="text" id="worker-name" placeholder="예: 김씨" required
+                    class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">기본 일당 (하루 1.0 기준) *</label>
+                  <input type="number" id="worker-wage" placeholder="예: 150000" required
+                    class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+                </div>
+                <button type="submit" class="w-full btn-primary justify-center text-sm py-2">
+                  인부 등록 <i data-lucide="plus" class="w-4 h-4"></i>
+                </button>
+              </form>
+            </div>
+
+            <!-- 2. Daily Log Clock-in -->
+            <div class="glass-panel p-6">
+              <h3 class="text-base font-semibold text-white mb-4">인부 출근/일당 등록</h3>
+              <form id="attendance-form" class="space-y-4">
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">근무 날짜 *</label>
+                  <div class="relative date-input-container">
+                    <input type="date" id="att-date" required
+                      class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 pl-3 pr-10 focus:outline-none focus:border-zandiPrimary text-sm cursor-pointer">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-emerald-400">
+                      <i data-lucide="calendar" class="w-4 h-4"></i>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <label class="block text-xs text-slate-400 mb-2">출근 인부 체크 및 근무 형태 설정 *</label>
+                  <div id="att-workers-list-container" class="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                    <!-- JS가 등록된 인부들을 체크박스 행으로 렌더링 -->
+                  </div>
+                </div>
+
+                <button type="submit" class="w-full btn-primary justify-center text-sm py-2">
+                  출근 대장 등록 <i data-lucide="plus" class="w-4 h-4"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Attendance Records Tables (LHS: Workers summary, RHS: Attendance history) -->
+          <div class="glass-panel p-6 lg:col-span-2 space-y-6">
+            <div>
+              <h3 class="text-base font-semibold text-white mb-4">인부 명단 및 정산 정보</h3>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm min-w-[400px]">
+                  <thead>
+                    <tr class="text-xs text-zandiTextMuted border-b border-zandiBorder/40">
+                      <th class="pb-2">이름</th>
+                      <th class="pb-2">설정 일당</th>
+                      <th class="pb-2">누적 근무일</th>
+                      <th class="pb-2">미지급 인건비</th>
+                      <th class="pb-2 text-center">작업</th>
+                    </tr>
+                  </thead>
+                  <tbody id="worker-list">
+                    <!-- Dynamically populated via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="border-t border-zandiBorder/20 pt-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h3 class="text-base font-semibold text-white">출근 및 인건비 내역</h3>
+                <div class="inline-flex rounded-lg bg-black/40 p-1 border border-zandiBorder/30">
+                  <button type="button" id="btn-view-table" class="px-3 py-1 text-xs rounded-md bg-zandiPrimary text-black font-semibold transition-all duration-300">
+                    표 보기
+                  </button>
+                  <button type="button" id="btn-view-calendar" class="px-3 py-1 text-xs rounded-md text-slate-400 hover:text-white transition-all duration-300">
+                    달력 보기
+                  </button>
+                </div>
+              </div>
+              
+              <!-- 인부 필터 컨트롤러 -->
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 mb-4 rounded-xl bg-black/25 border border-zandiBorder/20 text-xs">
+                <div>
+                  <label class="block text-slate-400 mb-1">인부 선택 필터</label>
+                  <select id="filter-att-worker" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
+                    <option value="">전체 인부</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-slate-400 mb-1">근무 형태 필터</label>
+                  <select id="filter-att-type" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
+                    <option value="">전체 근무</option>
+                    <option value="1.0">하루 근무 (1.0)</option>
+                    <option value="0.5">반나절 근무 (0.5)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-slate-400 mb-1">시작 날짜</label>
+                  <div class="relative date-input-container">
+                    <input type="date" id="filter-att-start" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 pr-9 focus:outline-none focus:border-zandiPrimary cursor-pointer">
+                    <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-emerald-400">
+                      <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-slate-400 mb-1">종료 날짜</label>
+                  <div class="relative date-input-container">
+                    <input type="date" id="filter-att-end" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 pr-9 focus:outline-none focus:border-zandiPrimary cursor-pointer">
+                    <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-emerald-400">
+                      <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 인부 필터 통계 정보 -->
+              <div class="flex flex-wrap gap-4 items-center justify-between p-3 mb-4 rounded-lg bg-emerald-950/20 border border-emerald-500/10 text-xs text-gray-300">
+                <div class="flex flex-wrap gap-x-6 gap-y-1">
+                  <span>선택 필터 합계:</span>
+                  <span>총 출근 횟수: <strong class="text-white" id="filter-att-count">0건</strong></span>
+                  <span>총 출근 일수: <strong class="text-zandiPrimary" id="filter-att-days">0일</strong></span>
+                  <span>총 인건비: <strong class="text-emerald-400 font-bold" id="filter-att-amount">0원</strong></span>
+                </div>
+              </div>
+
+              <!-- 표 뷰 컨테이너 -->
+              <div id="attendance-table-container" class="overflow-x-auto max-h-[400px] overflow-y-auto">
+                <table class="w-full text-left text-sm min-w-[500px]">
+                  <thead>
+                    <tr class="text-xs text-zandiTextMuted border-b border-zandiBorder/40">
+                      <th class="pb-2">일자</th>
+                      <th class="pb-2">인부명</th>
+                      <th class="pb-2 text-center">근무형태</th>
+                      <th class="pb-2 text-right">기준일당</th>
+                      <th class="pb-2 text-right">정산금액</th>
+                      <th class="pb-2 text-center">지급여부</th>
+                      <th class="pb-2 text-center">삭제</th>
+                    </tr>
+                  </thead>
+                  <tbody id="attendance-list">
+                    <!-- Dynamically populated via JS -->
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- 달력 뷰 컨테이너 -->
+              <div id="attendance-calendar-container" class="hidden space-y-4">
+                <div class="flex justify-between items-center bg-black/25 p-3 rounded-lg border border-zandiBorder/20">
+                  <div class="flex items-center space-x-2 text-xs">
+                    <button type="button" id="btn-cal-prev" class="btn-secondary py-1 px-2.5 text-xs"><i data-lucide="chevron-left" class="w-3.5 h-3.5"></i></button>
+                    <span id="cal-month-title" class="font-bold text-white min-w-[100px] text-center text-sm">2026년 6월</span>
+                    <button type="button" id="btn-cal-next" class="btn-secondary py-1 px-2.5 text-xs"><i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+                  </div>
+                  <span class="text-[11px] text-zandiTextMuted">※ 아래 달력에서 각 날짜별 출근 현황 확인 가능</span>
+                </div>
+
+                <div class="bg-black/35 border border-zandiBorder/20 rounded-xl p-3 overflow-x-auto">
+                  <div class="min-w-[450px]">
+                    <!-- 요일 헤더 -->
+                    <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-zandiTextMuted mb-2 border-b border-zandiBorder/10 pb-2">
+                      <div class="text-rose-400">일</div>
+                      <div>월</div>
+                      <div>화</div>
+                      <div>수</div>
+                      <div>목</div>
+                      <div>금</div>
+                      <div class="text-sky-400">토</div>
+                    </div>
+                    <!-- 날짜 셀들 -->
+                    <div id="attendance-calendar-grid" class="grid grid-cols-7 gap-1.5 min-h-[300px]">
+                      <!-- Dynamically generated calendar cells -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION 4.5: LAND RENT ================= -->
+      <section id="rent-section" class="content-section space-y-6 hidden">
+        <!-- Rents Overview Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="glass-panel p-6 flex flex-col justify-between relative overflow-hidden group border border-zandiBorder/40">
+            <div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-zandiTextMuted">총 토지 임대료</span>
+              <p id="rent-total-amount" class="text-3xl font-bold text-white mt-2">0원</p>
+            </div>
+          </div>
+          <div class="glass-panel p-6 flex flex-col justify-between relative overflow-hidden group border border-emerald-500/20">
+            <div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-zandiTextMuted">임대료 지급 완료액</span>
+              <p id="rent-paid-amount" class="text-3xl font-bold text-emerald-400 mt-2">0원</p>
+            </div>
+          </div>
+          <div class="glass-panel p-6 flex flex-col justify-between relative overflow-hidden group border border-rose-500/20">
+            <div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-zandiTextMuted">임대료 미지급 잔액</span>
+              <p id="rent-unpaid-amount" class="text-3xl font-bold text-rose-400 mt-2">0원</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Left side: Rent Register Form -->
+          <div class="glass-panel p-6">
+            <h3 class="text-base font-semibold text-white mb-4">토지 임대료 계약 등록</h3>
+            <form id="rent-form" class="space-y-4">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">동네명 *</label>
+                <input type="text" id="rent-village" placeholder="예: 평리, 송정리" required
+                  class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">토지 지번 / 명칭 *</label>
+                <input type="text" id="rent-land" placeholder="예: 105번지, 길가밭" required
+                  class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">임대료 금액 (원) *</label>
+                <input type="number" id="rent-amount" placeholder="금액 입력" required
+                  class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">지급 상태 *</label>
+                <select id="rent-is-paid" required
+                  class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+                  <option value="false">미지급</option>
+                  <option value="true">지급 완료</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">지급일자 (지급시 선택)</label>
+                <div class="relative date-input-container">
+                  <input type="date" id="rent-pay-date"
+                    class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 pl-3 pr-10 focus:outline-none focus:border-zandiPrimary text-sm cursor-pointer">
+                  <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-emerald-400">
+                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">메모 (계약 내용 등)</label>
+                <input type="text" id="rent-notes" placeholder="기타 특이 사항"
+                  class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+              </div>
+              <button type="submit" class="w-full btn-primary justify-center text-sm py-2">
+                임대료 등록 <i data-lucide="plus" class="w-4 h-4"></i>
+              </button>
+            </form>
+          </div>
+
+          <!-- Right side: Rent List Table with neighborhood filter -->
+          <div class="glass-panel p-6 lg:col-span-2 space-y-4">
+            <h3 class="text-base font-semibold text-white">토지 임대 장부 내역</h3>
+            
+            <div class="grid grid-cols-2 gap-3 p-4 rounded-xl bg-black/25 border border-zandiBorder/20 text-xs">
+              <div>
+                <label class="block text-slate-400 mb-1">동네별 필터</label>
+                <select id="filter-rent-village" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
+                  <option value="">전체 동네</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">지급 여부 필터</label>
+                <select id="filter-rent-paid" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
+                  <option value="">전체 상태</option>
+                  <option value="false">미지급</option>
+                  <option value="true">지급 완료</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm min-w-[500px]">
+                <thead>
+                  <tr class="text-xs text-zandiTextMuted border-b border-zandiBorder/40">
+                    <th class="pb-2">동네명</th>
+                    <th class="pb-2">토지 지번 / 명칭</th>
+                    <th class="pb-2 text-right">임대료</th>
+                    <th class="pb-2 text-center">지급상태</th>
+                    <th class="pb-2">지급일자</th>
+                    <th class="pb-2">메모</th>
+                    <th class="pb-2 text-center">작업</th>
+                  </tr>
+                </thead>
+                <tbody id="rent-list">
+                  <!-- JS dynamically populates -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- 설정(부부 연동 및 비밀번호 변경) 팝업 모달 -->
+  <div id="settings-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden">
+    <div class="glass-panel p-6 max-w-lg w-full mx-4 border border-zandiBorder max-h-[90vh] overflow-y-auto space-y-6">
+      <div class="flex justify-between items-center pb-2 border-b border-zandiBorder/20">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i data-lucide="settings" class="text-emerald-400"></i> 장부 환경 설정
+        </h3>
+        <button id="close-settings-modal-btn" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- 부부 연동 설정 -->
+      <div class="space-y-3">
+        <h4 class="text-sm font-semibold text-white">부부 실시간 데이터 연동 설정</h4>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          이 장부는 기본적으로 브라우저(로컬 스토리지)에 저장되므로, 다른 핸드폰이나 PC에서 남편분과 데이터를 같이 보고 쓰려면 Supabase 데이터베이스 연동이 필요합니다.<br>
+          Supabase URL 및 Key를 동일하게 입력하시면 부부의 핸드폰 간에 실시간으로 데이터가 안전하게 동기화됩니다.
+        </p>
+        <form id="settings-form" class="space-y-3 bg-black/25 p-3 rounded-lg border border-zandiBorder/20">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Supabase Project URL</label>
+            <input type="text" id="settings-supabase-url" placeholder="https://your-project.supabase.co"
+              class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-xs">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Supabase Anon Key</label>
+            <input type="password" id="settings-supabase-key" placeholder="your-anon-key"
+              class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-xs">
+          </div>
+          <div class="flex items-center space-x-2 pt-1">
+            <button type="submit" class="btn-primary text-xs py-2">
+              설정 저장 및 연동 완료 <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            </button>
+            <button type="button" id="clear-settings-btn" class="btn-secondary text-xs py-2 text-rose-400 border-rose-500/20">
+              연동 해제
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 비밀번호 변경 -->
+      <div class="space-y-3 border-t border-zandiBorder/20 pt-4">
+        <h4 class="text-sm font-semibold text-white">보안 로그인 비밀번호 변경</h4>
+        <p class="text-xs text-slate-400">
+          앱 로그인 시 사용하는 비밀번호를 변경합니다. (기본값: 1234)
+        </p>
+        <form id="password-change-form" class="space-y-3 bg-black/25 p-3 rounded-lg border border-zandiBorder/20">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">현재 비밀번호</label>
+            <input type="password" id="current-pass" required placeholder="현재 비밀번호 입력"
+              class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-xs">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">새 비밀번호</label>
+            <input type="password" id="new-pass" required placeholder="새 비밀번호 입력"
+              class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-xs">
+          </div>
+          <button type="submit" class="btn-primary text-xs py-2 w-full justify-center">
+            비밀번호 변경 완료 <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 분할 수금/입금 관리 모달 -->
+  <div id="payment-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden">
+    <div class="glass-panel p-6 max-w-md w-full mx-4 border border-zandiBorder">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i data-lucide="calculator" class="text-emerald-400"></i> 수금 및 분할 입금 관리
+        </h3>
+        <button id="close-payment-modal-btn" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-sm">
+        <div class="p-3 bg-black/35 rounded-lg border border-zandiBorder/35 space-y-1">
+          <div class="flex justify-between"><span class="text-slate-400 text-xs">거래처:</span><span id="modal-cust-name" class="font-semibold text-white">-</span></div>
+          <div class="flex justify-between"><span class="text-slate-400 text-xs">거래일자:</span><span id="modal-sale-date" class="text-gray-300">-</span></div>
+          <div class="flex justify-between"><span class="text-slate-400 text-xs">품목 규격:</span><span id="modal-product-type" class="text-primary font-medium">-</span></div>
+          <div class="flex justify-between border-t border-zandiBorder/20 pt-2 mt-2 font-bold text-base">
+            <span>총 거래금액:</span>
+            <span id="modal-total-amount" class="text-emerald-400">-</span>
+          </div>
+        </div>
+
+        <div>
+          <span class="block text-xs font-semibold text-slate-300 mb-2">입금 기록 내역</span>
+          <div id="modal-payment-history" class="space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
+            <!-- JS dynamically populates -->
+          </div>
+        </div>
+
+        <div class="border-t border-zandiBorder/20 pt-3">
+          <div class="flex justify-between items-center font-bold text-rose-400 mb-3">
+            <span>현재 미납(잔액):</span>
+            <span id="modal-uncollected-amount" class="text-lg">-</span>
+          </div>
+
+          <!-- 신규 입금 등록 폼 -->
+          <form id="modal-payment-form" class="space-y-3 p-3 bg-black/25 rounded-lg border border-zandiBorder/20">
+            <span class="block text-[11px] font-semibold text-slate-300">신규 입금 기록 등록</span>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <label class="block text-slate-400 mb-1">입금 날짜</label>
+                <div class="relative date-input-container">
+                  <input type="date" id="modal-pay-date" required class="w-full bg-black/40 border border-zandiBorder text-white rounded p-1.5 pr-8 focus:outline-none focus:border-zandiPrimary">
+                  <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none text-emerald-400">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">입금 금액(원)</label>
+                <input type="number" id="modal-pay-amount" required placeholder="금액 입력" class="w-full bg-black/40 border border-zandiBorder text-white rounded p-1.5 focus:outline-none focus:border-zandiPrimary">
+              </div>
+            </div>
+            <button type="submit" class="w-full btn-primary justify-center text-xs py-2">
+              입금 등록 완료 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 거래처 수정 모달 -->
+  <div id="customer-edit-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden">
+    <div class="glass-panel p-6 max-w-md w-full mx-4 border border-zandiBorder">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i data-lucide="edit-3" class="text-emerald-400"></i> 거래처 정보 수정
+        </h3>
+        <button id="close-cust-edit-modal-btn" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="edit-cust-form" class="space-y-4">
+        <input type="hidden" id="edit-cust-id">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">거래처 이름 *</label>
+          <input type="text" id="edit-cust-name" required
+            class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">연락처</label>
+          <input type="text" id="edit-cust-phone"
+            class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+        </div>
+        <div class="border-t border-zandiBorder/20 pt-3">
+          <span class="block text-xs font-semibold text-slate-300 mb-2">잔디 규격별 단가 설정 (원)</span>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <label class="block text-slate-400 mb-1">1818 단가</label>
+              <input type="number" id="edit-cust-price-1818" class="w-full bg-black/40 border border-zandiBorder text-white rounded py-1.5 px-2 focus:outline-none focus:border-zandiPrimary">
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">1818톤 단가</label>
+              <input type="number" id="edit-cust-price-1818t" class="w-full bg-black/40 border border-zandiBorder text-white rounded py-1.5 px-2 focus:outline-none focus:border-zandiPrimary">
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">3030 단가</label>
+              <input type="number" id="edit-cust-price-3030" class="w-full bg-black/40 border border-zandiBorder text-white rounded py-1.5 px-2 focus:outline-none focus:border-zandiPrimary">
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">3030톤 단가</label>
+              <input type="number" id="edit-cust-price-3030t" class="w-full bg-black/40 border border-zandiBorder text-white rounded py-1.5 px-2 focus:outline-none focus:border-zandiPrimary">
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">4060 단가</label>
+              <input type="number" id="edit-cust-price-4060" class="w-full bg-black/40 border border-zandiBorder text-white rounded py-1.5 px-2 focus:outline-none focus:border-zandiPrimary">
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">평당 단가</label>
+              <input type="number" id="edit-cust-price-pyeong" class="w-full bg-black/40 border border-zandiBorder text-white rounded py-1.5 px-2 focus:outline-none focus:border-zandiPrimary">
+            </div>
+            <div class="col-span-2">
+              <label class="block text-slate-400 mb-1">여유분 (기타 단가)</label>
+              <input type="number" id="edit-cust-price-extra" class="w-full bg-black/40 border border-zandiBorder text-white rounded py-1.5 px-2 focus:outline-none focus:border-zandiPrimary">
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="w-full btn-primary justify-center text-sm py-2">
+          수정 완료 <i data-lucide="check" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 5. 판매 대장 수정 모달 -->
+  <div id="sale-edit-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden">
+    <div class="glass-panel p-6 max-w-md w-full mx-4 border border-zandiBorder">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i data-lucide="edit-3" class="text-emerald-400"></i> 판매 내역 수정
+        </h3>
+        <button id="close-sale-edit-modal-btn" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="edit-sale-form" class="space-y-4">
+        <input type="hidden" id="edit-sale-id">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">거래처 선택 *</label>
+          <select id="edit-sale-customer" required
+            class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+            <!-- JS dynamically populates -->
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">판매 일자 *</label>
+          <div class="relative date-input-container">
+            <input type="date" id="edit-sale-date" required
+              class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 pl-3 pr-10 focus:outline-none focus:border-zandiPrimary text-sm cursor-pointer">
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-emerald-400">
+              <i data-lucide="calendar" class="w-4 h-4"></i>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">규격 선택 *</label>
+            <select id="edit-sale-type" required
+              class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+              <option value="pyeong">평당</option>
+              <option value="1818">1818</option>
+              <option value="1818t">1818 톤</option>
+              <option value="3030">3030</option>
+              <option value="3030t">3030 톤</option>
+              <option value="4060">4060</option>
+              <option value="extra">여유분 (기타)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">수량 *</label>
+            <input type="number" step="any" id="edit-sale-qty" required
+              class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">단가 (원) *</label>
+          <input type="number" id="edit-sale-price" required
+            class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">작업 메모</label>
+          <input type="text" id="edit-sale-notes"
+            class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+        </div>
+        <button type="submit" class="w-full btn-primary justify-center text-sm py-2">
+          수정 완료 <i data-lucide="check" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 6. 대시보드 일별 출하 내역 상세 모달 -->
+  <div id="dash-day-details-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden">
+    <div class="glass-panel p-6 max-w-xl w-full mx-4 border border-zandiBorder">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i data-lucide="truck" class="text-emerald-400"></i> <span id="dash-modal-date-title">2026-06-15</span> 출하 내역 상세
+        </h3>
+        <button id="close-dash-modal-btn" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
+          <table class="w-full text-left text-xs min-w-[450px]">
+            <thead>
+              <tr class="text-zandiTextMuted border-b border-zandiBorder/40">
+                <th class="pb-2">거래처명</th>
+                <th class="pb-2">품목 규격</th>
+                <th class="pb-2 text-right">수량</th>
+                <th class="pb-2 text-right">단가</th>
+                <th class="pb-2 text-right">총 거래액</th>
+                <th class="pb-2">작업 메모</th>
+              </tr>
+            </thead>
+            <tbody id="dash-modal-sales-list">
+              <!-- JS dynamically populates -->
+            </tbody>
+          </table>
+        </div>
+        <div class="flex flex-wrap gap-2 justify-between items-center pt-2 border-t border-zandiBorder/20">
+          <div class="flex gap-2">
+            <button type="button" id="btn-dash-go-sale" class="btn-primary text-xs py-2 px-3">
+              <i data-lucide="banknote" class="w-3.5 h-3.5"></i> 이 날짜로 잔디판매 등록
+            </button>
+            <button type="button" id="btn-dash-go-att" class="btn-secondary text-xs py-2 px-3 text-emerald-400 border-emerald-500/20">
+              <i data-lucide="calendar-check" class="w-3.5 h-3.5"></i> 이 날짜로 인부출근 등록
+            </button>
+          </div>
+          <button type="button" id="btn-close-dash-modal" class="btn-secondary text-xs py-2">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase JS Client CDN -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>

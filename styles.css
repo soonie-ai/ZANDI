@@ -1,0 +1,254 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+:root {
+  --bg-base: #080f0c;
+  --bg-surface: rgba(18, 30, 24, 0.65);
+  --bg-surface-hover: rgba(26, 43, 35, 0.85);
+  --border-color: rgba(46, 204, 113, 0.15);
+  --border-color-focus: rgba(46, 204, 113, 0.45);
+  
+  --primary: #2ecc71;
+  --primary-glow: rgba(46, 204, 113, 0.35);
+  --primary-hover: #27ae60;
+  
+  --danger: #e74c3c;
+  --danger-glow: rgba(231, 76, 60, 0.3);
+  --warning: #f1c40f;
+  --warning-glow: rgba(241, 196, 15, 0.3);
+  --info: #3498db;
+  
+  --text-primary: #f8fcf9;
+  --text-secondary: #a8b9b0;
+  --text-muted: #6b7e75;
+  
+  --font-family: 'Outfit', 'Noto Sans KR', sans-serif;
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: var(--font-family);
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(46, 204, 113, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(52, 152, 219, 0.05) 0%, transparent 45%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  transition: var(--transition-smooth);
+}
+
+.glass-panel:hover {
+  border-color: rgba(46, 204, 113, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Zandi Cell Colors */
+.zandi-empty { background: rgba(255, 255, 255, 0.05); }
+.zandi-level-1 { background: #1b4d3e; }
+.zandi-level-2 { background: #2b7d5a; }
+.zandi-level-3 { background: #3fa375; }
+.zandi-level-4 { background: #2ecc71; }
+
+.zandi-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  position: relative;
+  transition: var(--transition-smooth);
+  cursor: pointer;
+}
+
+.zandi-cell:hover {
+  transform: scale(1.25);
+  z-index: 10;
+  box-shadow: 0 0 8px var(--primary);
+}
+
+/* Interactive elements */
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: #050a07;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition-smooth);
+  box-shadow: 0 4px 14px var(--primary-glow);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--primary-glow);
+  filter: brightness(1.1);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition-smooth);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-color-focus);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, var(--danger), #c0392b);
+  color: white;
+  font-weight: 500;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition-smooth);
+}
+
+.btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px var(--danger-glow);
+}
+
+/* Custom switch / checkbox */
+.custom-checkbox {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.custom-checkbox input {
+  display: none;
+}
+
+.checkmark {
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 6px;
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
+}
+
+.custom-checkbox input:checked + .checkmark {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.custom-checkbox input:checked + .checkmark::after {
+  content: '✓';
+  color: #050a07;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* HTML5 Date Input Custom Style (전체 영역 탭 시 달력 자동 팝업) */
+input[type="date"] {
+  position: relative;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  height: auto;
+  color: transparent;
+  background: transparent;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.date-input-container:hover input[type="date"] {
+  border-color: var(--border-color-focus);
+}
+
+/* Attendance Calendar Premium Styles */
+.calendar-day-cell {
+  min-height: 85px;
+  background: rgba(18, 30, 24, 0.3);
+  border: 1px solid rgba(46, 204, 113, 0.08);
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  transition: var(--transition-smooth);
+}
+
+.calendar-day-cell:hover {
+  background: rgba(46, 204, 113, 0.05);
+  border-color: rgba(46, 204, 113, 0.3);
+}
+
+.calendar-day-cell.other-month {
+  opacity: 0.25;
+}
+
+.calendar-day-cell.today {
+  border: 1.5px solid var(--primary);
+  background: rgba(46, 204, 113, 0.08);
+  box-shadow: 0 0 8px rgba(46, 204, 113, 0.15);
+}
+
+
