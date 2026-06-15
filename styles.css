@@ -355,7 +355,7 @@ input, select, textarea {
     flex-direction: row !important;
     padding: 0 !important;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
   }
 
   /* 소유주 정보 간소화 */
@@ -366,36 +366,26 @@ input, select, textarea {
   #sidebar-actions-container {
     display: flex !important;
     flex-direction: row !important;
-    gap: 4px;
+    align-items: center !important;
+    gap: 8px !important;
     margin: 0 !important;
   }
 
   #sidebar-settings-btn {
-    width: 36px !important;
-    height: 36px !important;
+    height: 32px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     background: rgba(46, 204, 113, 0.15) !important;
     border: 1px solid rgba(46, 204, 113, 0.3) !important;
-    border-radius: 50% !important;
+    border-radius: 8px !important;
     color: #2ecc71 !important;
-    padding: 0 !important;
+    padding: 0 10px !important;
+    font-size: 11px !important;
   }
-
-  /* 로그아웃 버튼 - 아이콘만 */
-  #logout-btn span { display: none; }
-  #logout-btn { 
-    width: 36px !important;
-    height: 36px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background: rgba(231, 76, 60, 0.15) !important;
-    border: 1px solid rgba(231, 76, 60, 0.3) !important;
-    border-radius: 50% !important;
-    color: #e74c3c !important;
-    padding: 0 !important;
+  #sidebar-settings-btn span {
+    display: inline-block !important;
+    font-size: 11px !important;
   }
 
   /* 실시간 연동 표시등 모바일 최적화 */

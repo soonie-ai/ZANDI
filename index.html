@@ -115,20 +115,16 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-2" id="sidebar-actions-container">
+        <div class="flex flex-col gap-2 w-full" id="sidebar-actions-container">
           <!-- 실시간 연동 상태 표시등 -->
-          <span id="sync-indicator" class="text-[10px] px-2 py-1 rounded bg-black/40 border border-zandiBorder/20 text-slate-400 font-semibold flex items-center gap-1.5" title="데이터 동기화 상태">
+          <span id="sync-indicator" class="text-[10px] px-2 py-1.5 rounded bg-black/40 border border-zandiBorder/20 text-slate-400 font-semibold flex items-center justify-center gap-1.5" title="데이터 동기화 상태">
             <span class="w-1.5 h-1.5 rounded-full bg-neutral-500 inline-block"></span> 로컬
           </span>
 
           <!-- 설정 기어 버튼 -->
-          <button id="sidebar-settings-btn" class="text-slate-400 hover:text-white p-2 rounded-lg bg-black/20 hover:bg-white/5 border border-zandiBorder/20 transition-all duration-300" title="부부 연동 및 비밀번호 설정">
+          <button id="sidebar-settings-btn" class="flex items-center justify-center space-x-2 w-full py-2 px-4 rounded-lg bg-black/20 hover:bg-white/5 border border-zandiBorder/20 text-slate-300 hover:text-white transition-all duration-300 text-xs font-semibold" title="부부 연동 및 비밀번호 설정">
             <i data-lucide="settings" class="w-4 h-4"></i>
-          </button>
-          
-          <button id="logout-btn" class="flex items-center justify-center space-x-2 w-full py-2 px-4 rounded-lg bg-rose-950/20 text-rose-400 hover:bg-rose-950/40 text-xs font-medium border border-rose-500/10 transition-all duration-300">
-            <i data-lucide="log-out" class="w-4 h-4"></i>
-            <span>안전 로그아웃</span>
+            <span>동기화 및 설정</span>
           </button>
         </div>
       </div>
@@ -1224,6 +1220,6 @@
   <!-- Supabase JS Client CDN -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <!-- Application Logic -->
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

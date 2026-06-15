@@ -405,15 +405,17 @@ function initAuth() {
     if (e.key === 'Enter') loginBtn.click();
   });
 
-  logoutBtn.addEventListener('click', () => {
-    state.isAuthenticated = false;
-    sessionStorage.removeItem('zandi_authenticated');
-    loginOverlay.style.display = 'flex';
-    mainApp.style.opacity = '0.05';
-    mainApp.style.pointerEvents = 'none';
-    passwordInput.value = '';
-    loginError.style.display = 'none';
-  });
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      state.isAuthenticated = false;
+      sessionStorage.removeItem('zandi_authenticated');
+      loginOverlay.style.display = 'flex';
+      mainApp.style.opacity = '0.05';
+      mainApp.style.pointerEvents = 'none';
+      passwordInput.value = '';
+      loginError.style.display = 'none';
+    });
+  }
 }
 
 // 3. Navigation / Tab Switching
