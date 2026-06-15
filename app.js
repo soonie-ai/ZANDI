@@ -113,7 +113,7 @@ let currentActiveSaleId = null;
 // LocalStorage Helper functions
 function loadState() {
   const localData = localStorage.getItem('zandi_ledger_data');
-  const sessionAuth = sessionStorage.getItem('zandi_authenticated') === 'true';
+  const persistentAuth = localStorage.getItem('zandi_authenticated') === 'true';
   
   if (localData) {
     state = JSON.parse(localData);
@@ -140,7 +140,7 @@ function loadState() {
     }
   });
 
-  state.isAuthenticated = sessionAuth;
+  state.isAuthenticated = persistentAuth;
 }
 
 function saveState() {
@@ -408,7 +408,7 @@ function initAuth() {
     const currentMasterPassword = localStorage.getItem('zandi_password') || "1234";
     if (passwordInput.value === currentMasterPassword) {
       state.isAuthenticated = true;
-      sessionStorage.setItem('zandi_authenticated', 'true');
+      localStorage.setItem('zandi_authenticated', 'true');
       loginOverlay.style.display = 'none';
       mainApp.style.opacity = '1';
       mainApp.style.pointerEvents = 'auto';
@@ -426,7 +426,7 @@ function initAuth() {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
       state.isAuthenticated = false;
-      sessionStorage.removeItem('zandi_authenticated');
+      localStorage.removeItem('zandi_authenticated');
       loginOverlay.style.display = 'flex';
       mainApp.style.opacity = '0.05';
       mainApp.style.pointerEvents = 'none';
