@@ -667,7 +667,8 @@ function renderCustomers() {
     filterCustomerDropdown.innerHTML = '<option value="">전체 거래처</option>';
   }
 
-  state.customers.forEach(customer => {
+  const sortedCustomers = [...state.customers].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  sortedCustomers.forEach(customer => {
     const cSales = state.sales.filter(s => s.customerId === customer.id);
     const totalSales = cSales.reduce((sum, item) => sum + (item.quantity * item.price), 0);
     const totalCollected = cSales.reduce((sum, item) => sum + (item.payments || []).reduce((s, p) => s + p.amount, 0), 0);
@@ -709,7 +710,14 @@ function renderCustomers() {
         </div>
       </td>
       <td class="p-3 text-center">
-        <div class="flex items-center justify-center gap-2">
+        <div class="flex items-center justify-center gap-1">
+          <button onclick="moveCustomerUp('${customer.id}')" class="text-slate-400 hover:text-white p-0.5" title="위로 이동">
+            <i data-lucide="chevron-up" class="w-4 h-4"></i>
+          </button>
+          <button onclick="moveCustomerDown('${customer.id}')" class="text-slate-400 hover:text-white p-0.5" title="아래로 이동">
+            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+          </button>
+          <span class="text-gray-700 mx-0.5">|</span>
           <button onclick="openCustomerEditModal('${customer.id}')" class="text-emerald-400 hover:text-emerald-300 p-1" title="수정">
             <i data-lucide="edit-2" class="w-4 h-4"></i>
           </button>
@@ -1448,7 +1456,8 @@ function renderAll() {
 // 5.1. Customer Actions
 function addCustomer(name, phone, prices, initialDebt) {
   const id = 'cust-' + Date.now();
-  const newCust = { id, name, phone, prices, initialDebt: Number(initialDebt) || 0 };
+  const maxOrder = state.customers.reduce((max, c) => Math.max(max, c.sortOrder || 0), 0);
+  const newCust = { id, name, phone, prices, initialDebt: Number(initialDebt) || 0, sortOrder: maxOrder + 1 };
   state.customers.push(newCust);
   saveState();
   pushCustomer(newCust);
@@ -2717,5 +2726,49 @@ window.goSalesTabWithFilter = function(customerId, yearMonth) {
 
   // 5) 모달 닫기
   document.getElementById('customer-monthly-debt-modal').classList.add('hidden');
+};
+
+window.moveCustomerUp = async function(id) {
+  const sorted = [...state.customers].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  const idx = sorted.findIndex(c => c.id === id);
+  if (idx <= 0) return;
+  
+  const target = sorted[idx];
+  const prev = sorted[idx - 1];
+  
+  sorted.forEach((c, i) => {
+    c.sortOrder = i + 1;
+  });
+  
+  const temp = target.sortOrder;
+  target.sortOrder = prev.sortOrder;
+  prev.sortOrder = temp;
+  
+  saveState();
+  await pushCustomer(target);
+  await pushCustomer(prev);
+  renderAll();
+};
+
+window.moveCustomerDown = async function(id) {
+  const sorted = [...state.customers].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  const idx = sorted.findIndex(c => c.id === id);
+  if (idx < 0 || idx >= sorted.length - 1) return;
+  
+  const target = sorted[idx];
+  const next = sorted[idx + 1];
+  
+  sorted.forEach((c, i) => {
+    c.sortOrder = i + 1;
+  });
+  
+  const temp = target.sortOrder;
+  target.sortOrder = next.sortOrder;
+  next.sortOrder = temp;
+  
+  saveState();
+  await pushCustomer(target);
+  await pushCustomer(next);
+  renderAll();
 };
 
