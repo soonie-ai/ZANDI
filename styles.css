@@ -359,22 +359,31 @@ input, select, textarea {
   }
 
   /* 소유주 정보 간소화 */
-  aside > div:last-child > .glass-panel {
-    background: transparent !important;
-    border: none !important;
-    padding: 0 !important;
+  #owner-info-panel {
+    display: none !important;
+  }
+
+  #sidebar-actions-container {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 4px;
     margin: 0 !important;
   }
-  #owner-avatar, aside > div:last-child > .glass-panel span, #owner-name-input {
-    display: none !important;
+
+  #sidebar-settings-btn {
+    padding: 8px !important;
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-secondary) !important;
   }
 
   /* 로그아웃 버튼 - 아이콘만 */
   #logout-btn span { display: none; }
   #logout-btn { 
-    padding: 6px !important; 
+    padding: 8px !important; 
     background: transparent !important;
     border: none !important;
+    width: auto !important;
   }
 
   /* 메인 컨텐츠: 상하단 여백 확보 */

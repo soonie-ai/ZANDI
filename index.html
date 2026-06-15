@@ -98,8 +98,8 @@
       </nav>
 
       <div class="border-t border-zandiBorder/40 pt-4 flex flex-col space-y-4">
-        <!-- 소유주/사용자명 및 설정 기어 버튼 영역 -->
-        <div class="glass-panel p-3 bg-black/40 border border-zandiBorder/30 rounded-xl space-y-3">
+        <!-- 소유주/사용자명 영역 -->
+        <div id="owner-info-panel" class="glass-panel p-3 bg-black/40 border border-zandiBorder/30 rounded-xl space-y-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-2.5 min-w-0 flex-1">
               <div class="w-8 h-8 rounded-full bg-emerald-950 border border-zandiPrimary/40 flex items-center justify-center text-[10px] text-zandiPrimary font-bold flex-shrink-0" id="owner-avatar">
@@ -112,17 +112,20 @@
                 <span class="text-[9px] text-zandiTextMuted block truncate">장부 사용중</span>
               </div>
             </div>
-            <!-- 설정 기어 버튼 -->
-            <button id="sidebar-settings-btn" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-all duration-300" title="부부 연동 및 비밀번호 설정">
-              <i data-lucide="settings" class="w-4 h-4"></i>
-            </button>
           </div>
         </div>
 
-        <button id="logout-btn" class="flex items-center justify-center space-x-2 w-full py-2 px-4 rounded-lg bg-rose-950/20 text-rose-400 hover:bg-rose-950/40 text-xs font-medium border border-rose-500/10 transition-all duration-300">
-          <i data-lucide="log-out" class="w-4 h-4"></i>
-          <span>안전 로그아웃</span>
-        </button>
+        <div class="flex items-center gap-2" id="sidebar-actions-container">
+          <!-- 설정 기어 버튼 -->
+          <button id="sidebar-settings-btn" class="text-slate-400 hover:text-white p-2 rounded-lg bg-black/20 hover:bg-white/5 border border-zandiBorder/20 transition-all duration-300" title="부부 연동 및 비밀번호 설정">
+            <i data-lucide="settings" class="w-4 h-4"></i>
+          </button>
+          
+          <button id="logout-btn" class="flex items-center justify-center space-x-2 w-full py-2 px-4 rounded-lg bg-rose-950/20 text-rose-400 hover:bg-rose-950/40 text-xs font-medium border border-rose-500/10 transition-all duration-300">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+            <span>안전 로그아웃</span>
+          </button>
+        </div>
       </div>
     </aside>
 
