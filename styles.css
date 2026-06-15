@@ -371,19 +371,41 @@ input, select, textarea {
   }
 
   #sidebar-settings-btn {
-    padding: 8px !important;
-    background: transparent !important;
-    border: none !important;
-    color: var(--text-secondary) !important;
+    width: 36px !important;
+    height: 36px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(46, 204, 113, 0.15) !important;
+    border: 1px solid rgba(46, 204, 113, 0.3) !important;
+    border-radius: 50% !important;
+    color: #2ecc71 !important;
+    padding: 0 !important;
   }
 
   /* 로그아웃 버튼 - 아이콘만 */
   #logout-btn span { display: none; }
   #logout-btn { 
-    padding: 8px !important; 
-    background: transparent !important;
-    border: none !important;
-    width: auto !important;
+    width: 36px !important;
+    height: 36px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(231, 76, 60, 0.15) !important;
+    border: 1px solid rgba(231, 76, 60, 0.3) !important;
+    border-radius: 50% !important;
+    color: #e74c3c !important;
+    padding: 0 !important;
+  }
+
+  /* 실시간 연동 표시등 모바일 최적화 */
+  #sync-indicator {
+    padding: 4px 8px !important;
+    font-size: 9px !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: var(--text-secondary) !important;
   }
 
   /* 메인 컨텐츠: 상하단 여백 확보 */

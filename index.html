@@ -116,6 +116,11 @@
         </div>
 
         <div class="flex items-center gap-2" id="sidebar-actions-container">
+          <!-- 실시간 연동 상태 표시등 -->
+          <span id="sync-indicator" class="text-[10px] px-2 py-1 rounded bg-black/40 border border-zandiBorder/20 text-slate-400 font-semibold flex items-center gap-1.5" title="데이터 동기화 상태">
+            <span class="w-1.5 h-1.5 rounded-full bg-neutral-500 inline-block"></span> 로컬
+          </span>
+
           <!-- 설정 기어 버튼 -->
           <button id="sidebar-settings-btn" class="text-slate-400 hover:text-white p-2 rounded-lg bg-black/20 hover:bg-white/5 border border-zandiBorder/20 transition-all duration-300" title="부부 연동 및 비밀번호 설정">
             <i data-lucide="settings" class="w-4 h-4"></i>
