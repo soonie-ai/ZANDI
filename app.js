@@ -1006,7 +1006,10 @@ function renderAttendance() {
           if (val === 1.0) {
             wageInput.value = worker.baseDailyWage;
           } else if (val === 0.5) {
+            // 기본값은 절반으로 제안하지만, 직접 수정 가능하도록 포커스+전체선택
             wageInput.value = Math.round(worker.baseDailyWage * 0.5);
+            wageInput.focus();
+            wageInput.select(); // 전체 선택 → 바로 다른 금액 입력 가능
           }
         });
       }
