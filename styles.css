@@ -43,6 +43,15 @@ body {
   min-height: 100vh;
 }
 
+/* ==============================
+   📱 모바일 테이블 가로 스크롤
+   ============================== */
+.mobile-scroll-table {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -483,6 +492,55 @@ input, select, textarea {
   /* 텍스트 크기 조정 */
   h2.text-2xl { font-size: 1.2rem !important; }
   .text-3xl { font-size: 1.4rem !important; }
+
+  /* =========================================
+     📱 테이블 가로 스와이프 스크롤 (핵심!)
+     ========================================= */
+
+  /* main의 overflow 제한 해제 → 테이블 가로스크롤 허용 */
+  main {
+    overflow-x: visible !important;
+  }
+
+  /* 거래처 목록 테이블 컨테이너 */
+  .glass-panel.overflow-x-auto,
+  div.overflow-x-auto {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* 모든 테이블: 줄바꿈 금지 + 최소 너비 보장 */
+  table {
+    white-space: nowrap !important;
+    display: table !important;
+    width: max-content !important;
+    min-width: 100% !important;
+  }
+
+  /* 테이블 셀 줄바꿈 방지 */
+  table th,
+  table td {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+  }
+
+  /* 거래처 목록 섹션 전체 가로스크롤 허용 */
+  #customers-section .glass-panel {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* 판매 대장 섹션 전체 가로스크롤 허용 */
+  #sales-section .glass-panel {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* 근태 섹션 테이블 가로스크롤 허용 */
+  #attendance-section .overflow-x-auto {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
 }
 
 /* 초소형 (iPhone SE, Galaxy A 등) */

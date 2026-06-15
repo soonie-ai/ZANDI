@@ -32,7 +32,7 @@
     }
   </script>
   <!-- CSS Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=14">
+  <link rel="stylesheet" href="styles.css?v=17">
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -772,8 +772,19 @@
             </h3>
             
             <div class="flex flex-wrap items-center gap-2 text-xs">
-              <input type="text" id="filter-rent-search" placeholder="임대인 또는 주소 검색"
-                class="bg-black/40 border border-zandiBorder text-white rounded-lg p-2 w-48 focus:outline-none focus:border-zandiPrimary">
+              <!-- 항목별 검색 -->
+              <div class="flex items-center gap-1">
+                <select id="filter-rent-field" class="bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary text-xs">
+                  <option value="all">전체 항목</option>
+                  <option value="ownerName">임대인</option>
+                  <option value="phone">전화번호</option>
+                  <option value="address">주소</option>
+                  <option value="bankAccount">계좌번호</option>
+                  <option value="notes">메모</option>
+                </select>
+                <input type="text" id="filter-rent-search" placeholder="검색어 입력..."
+                  class="bg-black/40 border border-zandiBorder text-white rounded-lg p-2 w-36 focus:outline-none focus:border-zandiPrimary">
+              </div>
               
               <div class="flex items-center gap-1.5 bg-black/25 p-1 rounded-lg border border-zandiBorder/20">
                 <span class="text-slate-400 px-1 text-[11px]" id="filter-rent-year-label">지급 여부 (2026)</span>
@@ -840,7 +851,7 @@
               </div>
               <div>
                 <label class="block text-slate-400 mb-1">휴대번호</label>
-                <input type="text" id="rent-phone" placeholder="예: 010-1234-5678"
+                <input type="text" id="rent-phone" placeholder="예: 010-1234-5678" inputmode="tel" maxlength="13"
                   class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
               </div>
               <div>
@@ -856,7 +867,7 @@
                 </div>
                 <div>
                   <label class="block text-slate-400 mb-1">임대료 금액 (원) *</label>
-                  <input type="number" id="rent-amount" placeholder="금액 입력" required
+                  <input type="text" id="rent-amount" placeholder="예: 150,000" inputmode="numeric" required
                     class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
                 </div>
               </div>
@@ -1324,7 +1335,7 @@
         </div>
         <div>
           <label class="block text-xs text-slate-400 mb-1">휴대번호</label>
-          <input type="text" id="edit-rent-phone"
+          <input type="text" id="edit-rent-phone" inputmode="tel" maxlength="13"
             class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
         </div>
         <div>
@@ -1340,7 +1351,7 @@
           </div>
           <div>
             <label class="block text-xs text-slate-400 mb-1">임대료 금액 (원) *</label>
-            <input type="number" id="edit-rent-amount" required
+            <input type="text" id="edit-rent-amount" inputmode="numeric" required
               class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
           </div>
         </div>
@@ -1380,6 +1391,6 @@
   <!-- Supabase JS Client CDN -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <!-- Application Logic -->
-  <script src="app.js?v=14"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>
