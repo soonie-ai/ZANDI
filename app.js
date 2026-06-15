@@ -184,10 +184,11 @@ function subscribeToRealtime() {
   }
   
   realtimeChannel = supabaseClient.channel('zandi-realtime-sync')
-    .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
-      console.log('Realtime change detected:', payload);
-      pullFromSupabase();
-    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => pullFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => pullFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'workers' }, () => pullFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => pullFromSupabase())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'rents' }, () => pullFromSupabase())
     .subscribe((status) => {
       console.log('Realtime subscription status:', status);
     });
