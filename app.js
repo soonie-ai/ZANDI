@@ -835,25 +835,25 @@ function renderAttendance() {
     // checklist checkbox row render
     if (workersChecklistContainer) {
       const div = document.createElement('div');
-      div.className = 'flex items-center justify-between bg-black/20 p-2 rounded-lg border border-zandiBorder/40 text-xs gap-2';
+      div.className = 'flex flex-col gap-2 bg-black/20 p-2.5 rounded-lg border border-zandiBorder/40 text-xs';
       div.innerHTML = `
-        <div class="flex items-center gap-1.5 min-w-0">
+        <div class="flex items-center justify-between w-full">
           <label class="custom-checkbox">
             <input type="checkbox" class="att-worker-check" value="${worker.id}">
             <span class="checkmark"></span>
-            <span class="text-xs text-white font-medium truncate inline-block max-w-[80px]" title="${worker.name}">${worker.name}</span>
+            <span class="text-xs text-white font-semibold truncate" title="${worker.name}">${worker.name}</span>
           </label>
         </div>
-        <div class="flex items-center gap-1.5 flex-shrink-0">
-          <select class="att-worker-type bg-black/40 border border-zandiBorder text-white text-[11px] rounded p-1">
+        <div class="flex items-center gap-2 flex-wrap justify-between sm:justify-start">
+          <select class="att-worker-type bg-black/40 border border-zandiBorder text-white text-[11px] rounded p-1 flex-1 sm:flex-none">
             <option value="1.0">하루 (1.0)</option>
             <option value="0.5">반나절 (0.5)</option>
           </select>
           <div class="flex items-center gap-0.5">
-            <input type="number" class="att-worker-wage bg-black/40 border border-zandiBorder text-emerald-400 text-[11px] rounded p-1 w-16 text-right font-semibold" value="${worker.baseDailyWage}" placeholder="일당">
+            <input type="number" class="att-worker-wage bg-black/40 border border-zandiBorder text-emerald-400 text-[11px] rounded p-1 w-20 text-right font-bold" value="${worker.baseDailyWage}" placeholder="일당">
             <span class="text-[9px] text-slate-500">원</span>
           </div>
-          <label class="custom-checkbox">
+          <label class="custom-checkbox flex-shrink-0">
             <input type="checkbox" class="att-worker-paid">
             <span class="checkmark"></span>
             <span class="text-[11px] text-slate-400">지급</span>
