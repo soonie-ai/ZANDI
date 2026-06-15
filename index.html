@@ -755,22 +755,8 @@
               </div>
               <div>
                 <label class="block text-xs text-slate-400 mb-2">년도별 입금 여부</label>
-                <div class="flex flex-wrap gap-4 bg-black/25 p-2 rounded-lg border border-zandiBorder/20">
-                  <label class="custom-checkbox">
-                    <input type="checkbox" class="rent-register-year" value="2025">
-                    <span class="checkmark"></span>
-                    <span class="text-xs text-slate-300">2025년</span>
-                  </label>
-                  <label class="custom-checkbox">
-                    <input type="checkbox" class="rent-register-year" value="2026">
-                    <span class="checkmark"></span>
-                    <span class="text-xs text-slate-300">2026년</span>
-                  </label>
-                  <label class="custom-checkbox">
-                    <input type="checkbox" class="rent-register-year" value="2027">
-                    <span class="checkmark"></span>
-                    <span class="text-xs text-slate-300">2027년</span>
-                  </label>
+                <div class="flex flex-wrap gap-4 bg-black/25 p-2 rounded-lg border border-zandiBorder/20" id="rent-register-years-container">
+                  <!-- JS가 동적으로 작년, 올해, 내년 체크박스 생성 -->
                 </div>
               </div>
               <div>
@@ -805,12 +791,17 @@
                   class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
               </div>
               <div>
-                <label class="block text-slate-400 mb-1">지급 여부 필터 (2026년 기준)</label>
-                <select id="filter-rent-paid-2026" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
-                  <option value="">전체</option>
-                  <option value="false">2026년 미지급</option>
-                  <option value="true">2026년 지급 완료</option>
-                </select>
+                <label class="block text-slate-400 mb-1" id="filter-rent-year-label">지급 여부 필터 (2026년 기준)</label>
+                <div class="flex gap-2">
+                  <select id="filter-rent-year-select" class="w-1/2 bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
+                    <!-- JS가 동적으로 연도 옵션 목록 생성 -->
+                  </select>
+                  <select id="filter-rent-paid-select" class="w-1/2 bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
+                    <option value="">전체</option>
+                    <option value="false">미지급</option>
+                    <option value="true">지급 완료</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -824,9 +815,9 @@
                     <th class="pb-2 text-center">평수</th>
                     <th class="pb-2 text-right">임대료</th>
                     <th class="pb-2">계좌번호</th>
-                    <th class="pb-2 text-center">2025년</th>
-                    <th class="pb-2 text-center">2026년</th>
-                    <th class="pb-2 text-center">2027년</th>
+                    <th class="pb-2 text-center" id="rent-header-year-prev">2025년</th>
+                    <th class="pb-2 text-center" id="rent-header-year-curr">2026년</th>
+                    <th class="pb-2 text-center" id="rent-header-year-next">2027년</th>
                     <th class="pb-2">입금날짜</th>
                     <th class="pb-2">수정사항</th>
                     <th class="pb-2 text-center">작업</th>
@@ -1204,22 +1195,8 @@
         </div>
         <div>
           <label class="block text-xs text-slate-400 mb-2">년도별 입금 여부</label>
-          <div class="flex flex-wrap gap-4 bg-black/25 p-2 rounded-lg border border-zandiBorder/20">
-            <label class="custom-checkbox">
-              <input type="checkbox" id="edit-rent-year-2025" value="2025">
-              <span class="checkmark"></span>
-              <span class="text-xs text-slate-300">2025년</span>
-            </label>
-            <label class="custom-checkbox">
-              <input type="checkbox" id="edit-rent-year-2026" value="2026">
-              <span class="checkmark"></span>
-              <span class="text-xs text-slate-300">2026년</span>
-            </label>
-            <label class="custom-checkbox">
-              <input type="checkbox" id="edit-rent-year-2027" value="2027">
-              <span class="checkmark"></span>
-              <span class="text-xs text-slate-300">2027년</span>
-            </label>
+          <div class="flex flex-wrap gap-4 bg-black/25 p-2 rounded-lg border border-zandiBorder/20" id="rent-edit-years-container">
+            <!-- JS가 동적으로 작년, 올해, 내년 체크박스 생성 -->
           </div>
         </div>
         <div>

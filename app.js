@@ -1093,8 +1093,20 @@ function renderRent() {
   const rentList = document.getElementById('rent-list');
   if (!rentList) return;
 
+  const currentYear = new Date().getFullYear();
+  const yearPrev = currentYear - 1;
+  const yearCurr = currentYear;
+  const yearNext = currentYear + 1;
+
   const rentSearch = document.getElementById('filter-rent-search')?.value.trim().toLowerCase() || '';
-  const filterPaid2026 = document.getElementById('filter-rent-paid-2026')?.value || '';
+  const selectedFilterYear = document.getElementById('filter-rent-year-select')?.value || String(yearCurr);
+  const filterPaidVal = document.getElementById('filter-rent-paid-select')?.value || '';
+
+  // Update label
+  const filterLabel = document.getElementById('filter-rent-year-label');
+  if (filterLabel) {
+    filterLabel.textContent = `지급 여부 필터 (${selectedFilterYear}년 기준)`;
+  }
 
   // Filter rents
   let filteredRents = state.rents.filter(rent => {
@@ -1103,17 +1115,17 @@ function renderRent() {
       const addr = (rent.address || '').toLowerCase();
       if (!owner.includes(rentSearch) && !addr.includes(rentSearch)) return false;
     }
-    if (filterPaid2026 !== '') {
-      const isPaid = !!(rent.yearlyPayments && rent.yearlyPayments['2026']);
-      const expected = filterPaid2026 === 'true';
+    if (filterPaidVal !== '') {
+      const isPaid = !!(rent.yearlyPayments && rent.yearlyPayments[selectedFilterYear]);
+      const expected = filterPaidVal === 'true';
       if (isPaid !== expected) return false;
     }
     return true;
   });
 
-  // Calculate Metrics
+  // Calculate Metrics based on the selected filter year
   const totalAmount = state.rents.reduce((sum, r) => sum + Number(r.amount), 0);
-  const paidAmount = state.rents.filter(r => r.yearlyPayments && r.yearlyPayments['2026']).reduce((sum, r) => sum + Number(r.amount), 0);
+  const paidAmount = state.rents.filter(r => r.yearlyPayments && r.yearlyPayments[selectedFilterYear]).reduce((sum, r) => sum + Number(r.amount), 0);
   const unpaidAmount = totalAmount - paidAmount;
 
   document.getElementById('rent-total-amount').textContent = totalAmount.toLocaleString() + '원';
@@ -1126,9 +1138,9 @@ function renderRent() {
     rentList.innerHTML = '<tr><td colspan="12" class="p-4 text-center text-gray-500 text-xs">등록된 토지 임대 내역이 없습니다.</td></tr>';
   } else {
     filteredRents.forEach(rent => {
-      const pay2025 = !!(rent.yearlyPayments && rent.yearlyPayments['2025']);
-      const pay2026 = !!(rent.yearlyPayments && rent.yearlyPayments['2026']);
-      const pay2027 = !!(rent.yearlyPayments && rent.yearlyPayments['2027']);
+      const payPrev = !!(rent.yearlyPayments && rent.yearlyPayments[String(yearPrev)]);
+      const payCurr = !!(rent.yearlyPayments && rent.yearlyPayments[String(yearCurr)]);
+      const payNext = !!(rent.yearlyPayments && rent.yearlyPayments[String(yearNext)]);
 
       const tr = document.createElement('tr');
       tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20 text-xs';
@@ -1141,19 +1153,19 @@ function renderRent() {
         <td class="p-3 text-gray-300 max-w-[120px] truncate" title="${rent.bankAccount || ''}">${rent.bankAccount || '-'}</td>
         <td class="p-3 text-center">
           <label class="custom-checkbox inline-block">
-            <input type="checkbox" ${pay2025 ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '2025')">
+            <input type="checkbox" ${payPrev ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '${yearPrev}')">
             <span class="checkmark"></span>
           </label>
         </td>
         <td class="p-3 text-center">
           <label class="custom-checkbox inline-block">
-            <input type="checkbox" ${pay2026 ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '2026')">
+            <input type="checkbox" ${payCurr ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '${yearCurr}')">
             <span class="checkmark"></span>
           </label>
         </td>
         <td class="p-3 text-center">
           <label class="custom-checkbox inline-block">
-            <input type="checkbox" ${pay2027 ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '2027')">
+            <input type="checkbox" ${payNext ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '${yearNext}')">
             <span class="checkmark"></span>
           </label>
         </td>
@@ -1225,6 +1237,11 @@ window.openRentEditModal = function(id) {
   const rent = state.rents.find(r => r.id === id);
   if (!rent) return;
   
+  const currentYear = new Date().getFullYear();
+  const yearPrev = currentYear - 1;
+  const yearCurr = currentYear;
+  const yearNext = currentYear + 1;
+
   document.getElementById('edit-rent-id').value = rent.id;
   document.getElementById('edit-rent-owner-name').value = rent.ownerName || '';
   document.getElementById('edit-rent-phone').value = rent.phone || '';
@@ -1233,9 +1250,9 @@ window.openRentEditModal = function(id) {
   document.getElementById('edit-rent-amount').value = rent.amount || '';
   document.getElementById('edit-rent-bank-account').value = rent.bankAccount || '';
   
-  document.getElementById('edit-rent-year-2025').checked = !!(rent.yearlyPayments && rent.yearlyPayments['2025']);
-  document.getElementById('edit-rent-year-2026').checked = !!(rent.yearlyPayments && rent.yearlyPayments['2026']);
-  document.getElementById('edit-rent-year-2027').checked = !!(rent.yearlyPayments && rent.yearlyPayments['2027']);
+  document.getElementById('edit-rent-year-prev').checked = !!(rent.yearlyPayments && rent.yearlyPayments[String(yearPrev)]);
+  document.getElementById('edit-rent-year-curr').checked = !!(rent.yearlyPayments && rent.yearlyPayments[String(yearCurr)]);
+  document.getElementById('edit-rent-year-next').checked = !!(rent.yearlyPayments && rent.yearlyPayments[String(yearNext)]);
   
   document.getElementById('edit-rent-pay-date').value = rent.paymentDate || '';
   document.getElementById('edit-rent-notes').value = rent.notes || '';
@@ -1467,6 +1484,78 @@ function calculateTotals() {
   const collectedInput = document.getElementById('sale-collected-amount');
   if (collectedInput) {
     collectedInput.value = grandTotal;
+  }
+}
+
+function initRentYears() {
+  const currentYear = new Date().getFullYear();
+  const yearPrev = currentYear - 1;
+  const yearCurr = currentYear;
+  const yearNext = currentYear + 1;
+
+  // 1) 테이블 헤더 변경
+  const thPrev = document.getElementById('rent-header-year-prev');
+  const thCurr = document.getElementById('rent-header-year-curr');
+  const thNext = document.getElementById('rent-header-year-next');
+  if (thPrev) thPrev.textContent = `${yearPrev}년`;
+  if (thCurr) thCurr.textContent = `${yearCurr}년`;
+  if (thNext) thNext.textContent = `${yearNext}년`;
+
+  // 1.5) 지급 여부 필터 연도 선택 옵션 생성 (최근 5개년 생성)
+  const filterYearSelect = document.getElementById('filter-rent-year-select');
+  if (filterYearSelect) {
+    filterYearSelect.innerHTML = '';
+    for (let y = currentYear - 2; y <= currentYear + 2; y++) {
+      const opt = document.createElement('option');
+      opt.value = String(y);
+      opt.textContent = `${y}년`;
+      if (y === currentYear) opt.selected = true;
+      filterYearSelect.appendChild(opt);
+    }
+  }
+
+  // 2) 등록 폼 체크박스 생성
+  const regContainer = document.getElementById('rent-register-years-container');
+  if (regContainer) {
+    regContainer.innerHTML = `
+      <label class="custom-checkbox">
+        <input type="checkbox" class="rent-register-year" value="${yearPrev}">
+        <span class="checkmark"></span>
+        <span class="text-xs text-slate-300">${yearPrev}년</span>
+      </label>
+      <label class="custom-checkbox">
+        <input type="checkbox" class="rent-register-year" value="${yearCurr}">
+        <span class="checkmark"></span>
+        <span class="text-xs text-slate-300">${yearCurr}년</span>
+      </label>
+      <label class="custom-checkbox">
+        <input type="checkbox" class="rent-register-year" value="${yearNext}">
+        <span class="checkmark"></span>
+        <span class="text-xs text-slate-300">${yearNext}년</span>
+      </label>
+    `;
+  }
+
+  // 3) 수정 모달 체크박스 생성
+  const editContainer = document.getElementById('rent-edit-years-container');
+  if (editContainer) {
+    editContainer.innerHTML = `
+      <label class="custom-checkbox">
+        <input type="checkbox" id="edit-rent-year-prev" value="${yearPrev}">
+        <span class="checkmark"></span>
+        <span class="text-xs text-slate-300">${yearPrev}년</span>
+      </label>
+      <label class="custom-checkbox">
+        <input type="checkbox" id="edit-rent-year-curr" value="${yearCurr}">
+        <span class="checkmark"></span>
+        <span class="text-xs text-slate-300">${yearCurr}년</span>
+      </label>
+      <label class="custom-checkbox">
+        <input type="checkbox" id="edit-rent-year-next" value="${yearNext}">
+        <span class="checkmark"></span>
+        <span class="text-xs text-slate-300">${yearNext}년</span>
+      </label>
+    `;
   }
 }
 
@@ -1857,9 +1946,16 @@ function initForms() {
     });
   }
 
-  const filterRentPaid2026 = document.getElementById('filter-rent-paid-2026');
-  if (filterRentPaid2026) {
-    filterRentPaid2026.addEventListener('change', () => {
+  const filterRentYearSelect = document.getElementById('filter-rent-year-select');
+  if (filterRentYearSelect) {
+    filterRentYearSelect.addEventListener('change', () => {
+      renderRent();
+    });
+  }
+
+  const filterRentPaidSelect = document.getElementById('filter-rent-paid-select');
+  if (filterRentPaidSelect) {
+    filterRentPaidSelect.addEventListener('change', () => {
       renderRent();
     });
   }
@@ -1872,6 +1968,11 @@ function initForms() {
       const rent = state.rents.find(r => r.id === id);
       if (!rent) return;
       
+      const currentYear = new Date().getFullYear();
+      const yearPrev = currentYear - 1;
+      const yearCurr = currentYear;
+      const yearNext = currentYear + 1;
+
       rent.ownerName = document.getElementById('edit-rent-owner-name').value.trim();
       rent.phone = document.getElementById('edit-rent-phone').value.trim();
       rent.address = document.getElementById('edit-rent-address').value.trim();
@@ -1880,9 +1981,9 @@ function initForms() {
       rent.bankAccount = document.getElementById('edit-rent-bank-account').value.trim();
       
       if (!rent.yearlyPayments) rent.yearlyPayments = {};
-      rent.yearlyPayments['2025'] = document.getElementById('edit-rent-year-2025').checked;
-      rent.yearlyPayments['2026'] = document.getElementById('edit-rent-year-2026').checked;
-      rent.yearlyPayments['2027'] = document.getElementById('edit-rent-year-2027').checked;
+      rent.yearlyPayments[String(yearPrev)] = document.getElementById('edit-rent-year-prev').checked;
+      rent.yearlyPayments[String(yearCurr)] = document.getElementById('edit-rent-year-curr').checked;
+      rent.yearlyPayments[String(yearNext)] = document.getElementById('edit-rent-year-next').checked;
       
       rent.paymentDate = document.getElementById('edit-rent-pay-date').value;
       rent.notes = document.getElementById('edit-rent-notes').value.trim();
@@ -2091,6 +2192,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('att-date').value = todayStr;
 
   initForms();
+  initRentYears();
   
   // 판매 품목 기본 첫줄 추가
   addSaleItemRow();
