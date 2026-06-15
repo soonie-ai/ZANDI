@@ -32,7 +32,7 @@
     }
   </script>
   <!-- CSS Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -691,10 +691,10 @@
       <!-- ================= SECTION 4.5: LAND RENT ================= -->
       <section id="rent-section" class="content-section space-y-6 hidden">
         <!-- Rents Overview Metrics -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 no-print">
           <div class="glass-panel p-6 flex flex-col justify-between relative overflow-hidden group border border-zandiBorder/40">
             <div>
-              <span class="text-xs font-semibold uppercase tracking-wider text-zandiTextMuted">총 토지 임대료</span>
+              <span class="text-xs font-semibold uppercase tracking-wider text-zandiTextMuted">선택 동네 임대료 합계</span>
               <p id="rent-total-amount" class="text-3xl font-bold text-white mt-2">0원</p>
             </div>
           </div>
@@ -712,51 +712,147 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <!-- Left side: Rent Register Form -->
-          <div class="glass-panel p-6">
-            <h3 class="text-base font-semibold text-white mb-4">토지 임대료 계약 등록</h3>
-            <form id="rent-form" class="space-y-4">
+        <!-- 동네 탭 바 & 액션 버튼 영역 -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-black/25 p-4 rounded-xl border border-zandiBorder/20 no-print">
+          <!-- 4개 동네 탭 -->
+          <div class="flex flex-wrap gap-2" id="rent-neighborhood-tabs">
+            <button type="button" class="rent-village-tab px-4 py-2 text-xs font-bold rounded-lg border bg-zandiPrimary text-black border-zandiPrimary" data-village="1">
+              1동네 (이름수정 가능)
+            </button>
+            <button type="button" class="rent-village-tab px-4 py-2 text-xs font-bold rounded-lg border bg-black/40 text-slate-400 border-zandiBorder/30 hover:text-white" data-village="2">
+              2동네
+            </button>
+            <button type="button" class="rent-village-tab px-4 py-2 text-xs font-bold rounded-lg border bg-black/40 text-slate-400 border-zandiBorder/30 hover:text-white" data-village="3">
+              3동네
+            </button>
+            <button type="button" class="rent-village-tab px-4 py-2 text-xs font-bold rounded-lg border bg-black/40 text-slate-400 border-zandiBorder/30 hover:text-white" data-village="4">
+              4동네
+            </button>
+            <button type="button" id="btn-rename-village" class="px-2.5 py-2 text-xs font-semibold rounded-lg bg-emerald-950/40 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-900/35" title="현재 선택된 동네 이름 수정">
+              동네이름 수정 <i data-lucide="edit" class="w-3 h-3 inline-block ml-1"></i>
+            </button>
+          </div>
+
+          <!-- 등록 및 인쇄 컨트롤 -->
+          <div class="flex items-center gap-2">
+            <button type="button" id="btn-open-rent-register" class="btn-primary text-xs py-2 px-3">
+              계약 등록 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            </button>
+            <button type="button" onclick="printRentLandscape()" class="btn-secondary text-xs py-2 px-3 text-emerald-400 border-emerald-500/20">
+              A4 가로 인쇄 <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 임대 장부 테이블 본문 -->
+        <div class="glass-panel p-6 space-y-4 relative overflow-hidden" id="rent-table-panel">
+          <!-- 프린트용 헤더 (화면에서는 안보임) -->
+          <div class="print-only mb-6 hidden">
+            <h1 class="text-2xl font-bold text-center text-black" id="print-document-title">토지 임대료 관리 장부</h1>
+            <p class="text-right text-xs text-slate-600 mt-2" id="print-date-info"></p>
+          </div>
+
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
+            <h3 class="text-base font-semibold text-white flex items-center gap-2">
+              <i data-lucide="scroll" class="text-zandiPrimary"></i> <span id="current-rent-village-title">1동네</span> 계약 장부
+            </h3>
+            
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+              <input type="text" id="filter-rent-search" placeholder="임대인 또는 주소 검색"
+                class="bg-black/40 border border-zandiBorder text-white rounded-lg p-2 w-48 focus:outline-none focus:border-zandiPrimary">
+              
+              <div class="flex items-center gap-1.5 bg-black/25 p-1 rounded-lg border border-zandiBorder/20">
+                <span class="text-slate-400 px-1 text-[11px]" id="filter-rent-year-label">지급 여부 (2026)</span>
+                <select id="filter-rent-year-select" class="bg-black/40 border border-zandiBorder text-white rounded p-1.5 focus:outline-none focus:border-zandiPrimary">
+                  <!-- JS 동적 연도 옵션 -->
+                </select>
+                <select id="filter-rent-paid-select" class="bg-black/40 border border-zandiBorder text-white rounded p-1.5 focus:outline-none focus:border-zandiPrimary">
+                  <option value="">전체</option>
+                  <option value="false">미지급</option>
+                  <option value="true">지급 완료</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- 임대 테이블 컨테이너: 기재 항목이 길어 가로 스크롤 & 폰트 크기 최적화 -->
+          <div class="overflow-x-auto w-full rent-scrollable-container">
+            <table class="w-full text-left text-sm min-w-[1050px]" id="rent-main-table">
+              <thead>
+                <tr class="text-xs text-zandiTextMuted border-b border-zandiBorder/40">
+                  <th class="pb-2 pl-2">임대인</th>
+                  <th class="pb-2">휴대번호</th>
+                  <th class="pb-2">주소</th>
+                  <th class="pb-2 text-center">평수</th>
+                  <th class="pb-2 text-right">임대료</th>
+                  <th class="pb-2">계좌번호</th>
+                  <th class="pb-2 text-center" id="rent-header-year-prev">작년</th>
+                  <th class="pb-2 text-center" id="rent-header-year-curr">올해</th>
+                  <th class="pb-2 text-center" id="rent-header-year-next">내년</th>
+                  <th class="pb-2">입금날짜</th>
+                  <th class="pb-2">수정사항</th>
+                  <th class="pb-2 text-center no-print">작업</th>
+                </tr>
+              </thead>
+              <tbody id="rent-list">
+                <!-- JS dynamically populates -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 8. 토지 임대료 계약 등록 모달 (추가키 누르면 입력창 활성화) -->
+        <div id="rent-register-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden">
+          <div class="glass-panel p-6 max-w-lg w-full mx-4 border border-zandiBorder max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-zandiBorder/25">
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <i data-lucide="plus-circle" class="text-zandiPrimary"></i> 신규 토지 임대료 계약 등록
+              </h3>
+              <button type="button" id="close-rent-register-modal-btn" class="text-slate-400 hover:text-white p-1">
+                <i data-lucide="x" class="w-5 h-5"></i>
+              </button>
+            </div>
+            <form id="rent-form" class="space-y-4 text-xs">
               <div>
-                <label class="block text-xs text-slate-400 mb-1">이름 *</label>
+                <label class="block text-slate-400 mb-1">이름 *</label>
                 <input type="text" id="rent-owner-name" placeholder="임대인 이름" required
                   class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
               </div>
               <div>
-                <label class="block text-xs text-slate-400 mb-1">휴대번호</label>
+                <label class="block text-slate-400 mb-1">휴대번호</label>
                 <input type="text" id="rent-phone" placeholder="예: 010-1234-5678"
                   class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
               </div>
               <div>
-                <label class="block text-xs text-slate-400 mb-1">주소</label>
+                <label class="block text-slate-400 mb-1">주소</label>
                 <input type="text" id="rent-address" placeholder="예: 평리 105번지"
                   class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs text-slate-400 mb-1">평수 (면적)</label>
+                  <label class="block text-slate-400 mb-1">평수 (면적)</label>
                   <input type="number" id="rent-area" placeholder="예: 500"
                     class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-slate-400 mb-1">임대료 금액 (원) *</label>
+                  <label class="block text-slate-400 mb-1">임대료 금액 (원) *</label>
                   <input type="number" id="rent-amount" placeholder="금액 입력" required
                     class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
                 </div>
               </div>
               <div>
-                <label class="block text-xs text-slate-400 mb-1">계좌번호</label>
+                <label class="block text-slate-400 mb-1">계좌번호</label>
                 <input type="text" id="rent-bank-account" placeholder="예: 농협 302-..."
                   class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
               </div>
               <div>
-                <label class="block text-xs text-slate-400 mb-2">년도별 입금 여부</label>
-                <div class="flex flex-wrap gap-4 bg-black/25 p-2 rounded-lg border border-zandiBorder/20" id="rent-register-years-container">
+                <label class="block text-slate-400 mb-2">년도별 입금 여부</label>
+                <div class="flex flex-wrap gap-4 bg-black/25 p-2.5 rounded-lg border border-zandiBorder/20" id="rent-register-years-container">
                   <!-- JS가 동적으로 작년, 올해, 내년 체크박스 생성 -->
                 </div>
               </div>
               <div>
-                <label class="block text-xs text-slate-400 mb-1">입금일자</label>
+                <label class="block text-slate-400 mb-1">입금일자</label>
                 <div class="relative date-input-container">
                   <input type="date" id="rent-pay-date"
                     class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 pl-3 pr-10 focus:outline-none focus:border-zandiPrimary text-sm cursor-pointer">
@@ -766,64 +862,14 @@
                 </div>
               </div>
               <div>
-                <label class="block text-xs text-slate-400 mb-1">수정사항 (메모)</label>
+                <label class="block text-slate-400 mb-1">수정사항 (메모)</label>
                 <input type="text" id="rent-notes" placeholder="기타 특이 사항"
                   class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
               </div>
               <button type="submit" class="w-full btn-primary justify-center text-sm py-2">
-                임대 계약 등록 <i data-lucide="plus" class="w-4 h-4"></i>
+                임대 계약 등록 완료 <i data-lucide="check" class="w-4 h-4"></i>
               </button>
             </form>
-          </div>
-
-          <!-- Right side: Rent List Table with filter -->
-          <div class="glass-panel p-6 lg:col-span-2 space-y-4">
-            <h3 class="text-base font-semibold text-white">토지 임대 장부 내역</h3>
-            
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl bg-black/25 border border-zandiBorder/20 text-xs">
-              <div>
-                <label class="block text-slate-400 mb-1">임대인/주소 검색</label>
-                <input type="text" id="filter-rent-search" placeholder="이름 또는 주소 검색"
-                  class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
-              </div>
-              <div>
-                <label class="block text-slate-400 mb-1" id="filter-rent-year-label">지급 여부 필터 (2026년 기준)</label>
-                <div class="flex gap-2">
-                  <select id="filter-rent-year-select" class="w-1/2 bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
-                    <!-- JS가 동적으로 연도 옵션 목록 생성 -->
-                  </select>
-                  <select id="filter-rent-paid-select" class="w-1/2 bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
-                    <option value="">전체</option>
-                    <option value="false">미지급</option>
-                    <option value="true">지급 완료</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-sm min-w-[850px]">
-                <thead>
-                  <tr class="text-xs text-zandiTextMuted border-b border-zandiBorder/40">
-                    <th class="pb-2">임대인</th>
-                    <th class="pb-2">휴대번호</th>
-                    <th class="pb-2">주소</th>
-                    <th class="pb-2 text-center">평수</th>
-                    <th class="pb-2 text-right">임대료</th>
-                    <th class="pb-2">계좌번호</th>
-                    <th class="pb-2 text-center" id="rent-header-year-prev">2025년</th>
-                    <th class="pb-2 text-center" id="rent-header-year-curr">2026년</th>
-                    <th class="pb-2 text-center" id="rent-header-year-next">2027년</th>
-                    <th class="pb-2">입금날짜</th>
-                    <th class="pb-2">수정사항</th>
-                    <th class="pb-2 text-center">작업</th>
-                  </tr>
-                </thead>
-                <tbody id="rent-list">
-                  <!-- JS dynamically populates -->
-                </tbody>
-              </table>
-            </div>
           </div>
         </div>
       </section>
@@ -1220,6 +1266,6 @@
   <!-- Supabase JS Client CDN -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <!-- Application Logic -->
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

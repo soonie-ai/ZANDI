@@ -82,8 +82,16 @@ let attFilters = {
 };
 
 let rentFilters = {
-  village: '',
+  village: '1', // 기본값 1동네
   isPaid: ''
+};
+
+// 동네 이름 정의 (로컬 스토리지 캐싱 지원)
+let rentVillageNames = {
+  '1': localStorage.getItem('rent_village_name_1') || '1동네',
+  '2': localStorage.getItem('rent_village_name_2') || '2동네',
+  '3': localStorage.getItem('rent_village_name_3') || '3동네',
+  '4': localStorage.getItem('rent_village_name_4') || '4동네'
 };
 
 // Calendar States
@@ -255,7 +263,8 @@ async function pullFromSupabase() {
         bankAccount: r.bankAccount || '',
         yearlyPayments: r.yearlyPayments || {},
         paymentDate: r.paymentDate || '',
-        notes: r.notes || ''
+        notes: r.notes || '',
+        village: r.village || '1'
       }));
     }
 
@@ -361,7 +370,8 @@ async function pushRent(rent) {
       bankAccount: rent.bankAccount,
       yearlyPayments: rent.yearlyPayments,
       paymentDate: rent.paymentDate,
-      notes: rent.notes
+      notes: rent.notes,
+      village: rent.village || '1'
     });
   } catch (e) { console.error(e); }
 }
@@ -1111,15 +1121,31 @@ function renderRent() {
   const rentSearch = document.getElementById('filter-rent-search')?.value.trim().toLowerCase() || '';
   const selectedFilterYear = document.getElementById('filter-rent-year-select')?.value || String(yearCurr);
   const filterPaidVal = document.getElementById('filter-rent-paid-select')?.value || '';
+  const currentVillage = rentFilters.village || '1';
 
-  // Update label
-  const filterLabel = document.getElementById('filter-rent-year-label');
-  if (filterLabel) {
-    filterLabel.textContent = `지급 여부 필터 (${selectedFilterYear}년 기준)`;
+  // 1) 동네 이름 로컬 캐싱 기반 UI 갱신
+  const villageTitleEl = document.getElementById('current-rent-village-title');
+  if (villageTitleEl) {
+    villageTitleEl.textContent = rentVillageNames[currentVillage];
   }
 
-  // Filter rents
+  const tabs = document.querySelectorAll('.rent-village-tab');
+  tabs.forEach(tab => {
+    const v = tab.dataset.village;
+    tab.textContent = rentVillageNames[v] || `${v}동네`;
+    if (v === currentVillage) {
+      tab.className = 'rent-village-tab px-4 py-2 text-xs font-bold rounded-lg border bg-zandiPrimary text-black border-zandiPrimary flex-shrink-0';
+    } else {
+      tab.className = 'rent-village-tab px-4 py-2 text-xs font-bold rounded-lg border bg-black/40 text-slate-400 border-zandiBorder/30 hover:text-white flex-shrink-0';
+    }
+  });
+
+  // Filter rents (동네 & 검색어 & 지급여부)
   let filteredRents = state.rents.filter(rent => {
+    // 동네 필터 (기존에 동네 구분이 없던 임대 항목은 '1'동네로 간주)
+    const rentVillage = rent.village || '1';
+    if (rentVillage !== currentVillage) return false;
+
     if (rentSearch) {
       const owner = (rent.ownerName || '').toLowerCase();
       const addr = (rent.address || '').toLowerCase();
@@ -1133,9 +1159,15 @@ function renderRent() {
     return true;
   });
 
-  // Calculate Metrics based on the selected filter year
-  const totalAmount = state.rents.reduce((sum, r) => sum + Number(r.amount), 0);
-  const paidAmount = state.rents.filter(r => r.yearlyPayments && r.yearlyPayments[selectedFilterYear]).reduce((sum, r) => sum + Number(r.amount), 0);
+  // Calculate Metrics based on the selected filter year AND active village
+  const totalAmount = state.rents
+    .filter(r => (r.village || '1') === currentVillage)
+    .reduce((sum, r) => sum + Number(r.amount), 0);
+    
+  const paidAmount = state.rents
+    .filter(r => (r.village || '1') === currentVillage && r.yearlyPayments && r.yearlyPayments[selectedFilterYear])
+    .reduce((sum, r) => sum + Number(r.amount), 0);
+    
   const unpaidAmount = totalAmount - paidAmount;
 
   document.getElementById('rent-total-amount').textContent = totalAmount.toLocaleString() + '원';
@@ -1145,7 +1177,7 @@ function renderRent() {
   // Render Table
   rentList.innerHTML = '';
   if (filteredRents.length === 0) {
-    rentList.innerHTML = '<tr><td colspan="12" class="p-4 text-center text-gray-500 text-xs">등록된 토지 임대 내역이 없습니다.</td></tr>';
+    rentList.innerHTML = '<tr><td colspan="12" class="p-6 text-center text-gray-500 text-xs">선택한 동네에 등록된 토지 임대 내역이 없습니다.</td></tr>';
   } else {
     filteredRents.forEach(rent => {
       const payPrev = !!(rent.yearlyPayments && rent.yearlyPayments[String(yearPrev)]);
@@ -1155,7 +1187,7 @@ function renderRent() {
       const tr = document.createElement('tr');
       tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20 text-xs';
       tr.innerHTML = `
-        <td class="p-3 text-white font-medium">${rent.ownerName || '-'}</td>
+        <td class="p-3 text-white font-medium pl-2">${rent.ownerName || '-'}</td>
         <td class="p-3 text-gray-300">${rent.phone || '-'}</td>
         <td class="p-3 text-gray-300 max-w-[150px] truncate" title="${rent.address || ''}">${rent.address || '-'}</td>
         <td class="p-3 text-center text-gray-300">${rent.area ? rent.area + '평' : '-'}</td>
@@ -1181,7 +1213,7 @@ function renderRent() {
         </td>
         <td class="p-3 text-gray-400">${rent.paymentDate || '-'}</td>
         <td class="p-3 text-gray-400 max-w-[120px] truncate" title="${rent.notes || ''}">${rent.notes || '-'}</td>
-        <td class="p-3 text-center">
+        <td class="p-3 text-center no-print">
           <div class="flex items-center justify-center gap-1.5">
             <button onclick="openRentEditModal('${rent.id}')" class="text-emerald-400 hover:text-emerald-300 p-1">
               <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
@@ -1202,6 +1234,7 @@ function renderRent() {
 // Rent Actions
 function addRent(ownerName, phone, address, area, amount, bankAccount, yearlyPayments, paymentDate, notes) {
   const id = 'rent-' + Date.now();
+  const currentVillage = rentFilters.village || '1';
   const newRent = {
     id,
     ownerName,
@@ -1212,7 +1245,8 @@ function addRent(ownerName, phone, address, area, amount, bankAccount, yearlyPay
     bankAccount,
     yearlyPayments: yearlyPayments || {},
     paymentDate,
-    notes
+    notes,
+    village: currentVillage
   };
   state.rents.push(newRent);
   saveState();
@@ -1970,6 +2004,60 @@ function initForms() {
     });
   }
 
+  // 1) 동네 탭 전환 클릭 처리
+  const rentTabsContainer = document.getElementById('rent-neighborhood-tabs');
+  if (rentTabsContainer) {
+    rentTabsContainer.addEventListener('click', (e) => {
+      const tab = e.target.closest('.rent-village-tab');
+      if (tab) {
+        rentFilters.village = tab.dataset.village;
+        renderRent();
+      }
+    });
+  }
+
+  // 2) 동네 이름 수정 팝업 리스너
+  const renameVillageBtn = document.getElementById('btn-rename-village');
+  if (renameVillageBtn) {
+    renameVillageBtn.addEventListener('click', () => {
+      const currentVillage = rentFilters.village || '1';
+      const oldName = rentVillageNames[currentVillage];
+      const newName = prompt(`선택한 ${currentVillage}동네의 이름을 입력해 주세요:`, oldName);
+      if (newName !== null && newName.trim() !== '') {
+        rentVillageNames[currentVillage] = newName.trim();
+        localStorage.setItem(`rent_village_name_${currentVillage}`, newName.trim());
+        renderRent();
+      }
+    });
+  }
+
+  // 3) 토지 임대료 계약 등록 팝업 열기 / 닫기
+  const openRentRegisterBtn = document.getElementById('btn-open-rent-register');
+  const rentRegisterModal = document.getElementById('rent-register-modal');
+  const closeRentRegisterModalBtn = document.getElementById('close-rent-register-modal-btn');
+
+  if (openRentRegisterBtn && rentRegisterModal) {
+    openRentRegisterBtn.addEventListener('click', () => {
+      rentRegisterModal.classList.remove('hidden');
+    });
+  }
+
+  if (closeRentRegisterModalBtn && rentRegisterModal) {
+    closeRentRegisterModalBtn.addEventListener('click', () => {
+      rentRegisterModal.classList.add('hidden');
+    });
+  }
+
+  // rentForm submit 시 등록 모달도 함께 닫아주기 추가
+  if (rentForm) {
+    // 기존 리스너 내부에 모달 닫기 코드 삽입을 위해 submit 재정의
+    rentForm.addEventListener('submit', () => {
+      if (rentRegisterModal) {
+        rentRegisterModal.classList.add('hidden');
+      }
+    });
+  }
+
   const editRentForm = document.getElementById('edit-rent-form');
   if (editRentForm) {
     editRentForm.addEventListener('submit', async (e) => {
@@ -2257,5 +2345,26 @@ window.openSaleEditModal = function(id) {
   document.getElementById('edit-sale-notes').value = sale.notes || '';
 
   document.getElementById('sale-edit-modal').classList.remove('hidden');
+};
+
+// 4.5.1. 가로 인쇄 기능 구현
+window.printRentLandscape = function() {
+  const currentVillage = rentFilters.village || '1';
+  const villageName = rentVillageNames[currentVillage];
+  
+  // 1) 인쇄 타이틀 동적으로 세팅
+  const printTitle = document.getElementById('print-document-title');
+  if (printTitle) {
+    printTitle.textContent = `${villageName} 토지 임대료 관리 장부`;
+  }
+  
+  const printDate = document.getElementById('print-date-info');
+  if (printDate) {
+    const today = new Date();
+    printDate.textContent = `출력 일시: ${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
+  }
+
+  // 2) 브라우저 기본 인쇄 실행 (css의 @media print에서 가로 세팅 자동 적용)
+  window.print();
 };
 
