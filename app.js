@@ -158,6 +158,13 @@ async function initSupabase() {
   if (url && key && window.supabase) {
     try {
       supabaseClient = window.supabase.createClient(url, key);
+      
+      // 실제 연결 상태 테스트를 위한 간단한 쿼리 호출
+      const { data, error } = await supabaseClient.from('customers').select('id').limit(1);
+      if (error) {
+        throw error;
+      }
+      
       if (indicator) {
         indicator.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block mr-1"></span> 부부 실시간 연동중';
       }
@@ -168,6 +175,7 @@ async function initSupabase() {
       if (indicator) {
         indicator.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500 inline-block mr-1"></span> 연동 오류';
       }
+      alert(`[Supabase 연동 실패] 주소 또는 Key가 틀렸거나 데이터베이스 설정 오류입니다.\n\n오류 내용: ${e.message || JSON.stringify(e)}`);
     }
   } else {
     if (indicator) {
