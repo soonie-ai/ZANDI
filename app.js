@@ -1568,11 +1568,7 @@ function calculateTotals() {
   
   document.getElementById('sale-items-total').textContent = grandTotal.toLocaleString() + '원';
   
-  // 수금액(받은 돈) 인풋에 합계 자동 기입
-  const collectedInput = document.getElementById('sale-collected-amount');
-  if (collectedInput) {
-    collectedInput.value = grandTotal;
-  }
+  // 수금액(받은 돈) 인풋 자동 기입 제거 (기본 미수금 0원 설정을 위함)
 }
 
 function initRentYears() {
@@ -1750,11 +1746,11 @@ function initForms() {
     saveState();
     renderAll();
     
-    // Reset
     document.getElementById('sale-form').reset();
     document.getElementById('sale-items-container').innerHTML = '';
     addSaleItemRow(); // 기본 한줄 추가
     document.getElementById('sale-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('sale-collected-amount').value = '0';
   });
 
   // 6) 인부 등록
