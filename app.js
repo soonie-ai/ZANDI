@@ -1190,7 +1190,7 @@ function renderRent() {
         <td class="p-3 text-white font-medium pl-2">${rent.ownerName || '-'}</td>
         <td class="p-3 text-gray-300">${rent.phone || '-'}</td>
         <td class="p-3 text-gray-300 max-w-[150px] truncate" title="${rent.address || ''}">${rent.address || '-'}</td>
-        <td class="p-3 text-center text-gray-300 print-hide">${rent.area ? rent.area + '평' : '-'}</td>
+        <td class="p-3 text-center text-gray-300">${rent.area ? rent.area + '평' : '-'}</td>
         <td class="p-3 text-right text-emerald-400 font-bold">${Number(rent.amount).toLocaleString()}원</td>
         <td class="p-3 text-gray-300 max-w-[120px] truncate" title="${rent.bankAccount || ''}">${rent.bankAccount || '-'}</td>
         <td class="p-3 text-center print-hide">
