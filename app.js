@@ -231,7 +231,7 @@ async function pullFromSupabase() {
       console.warn("Supabase rents table pull failed (might not exist yet):", e);
     }
 
-    state.customers = cust.map(c => ({ id: c.id, name: c.name, phone: c.phone, prices: c.prices }));
+    state.customers = cust.map(c => ({ id: c.id, name: c.name, phone: c.phone, prices: c.prices, initialDebt: c.initial_debt || 0, initialDebtCollected: c.initial_debt_collected || 0 }));
     state.sales = sal.map(s => ({ 
       id: s.id, 
       customerId: s.customer_id, 
@@ -282,7 +282,9 @@ async function pushCustomer(customer) {
       id: customer.id,
       name: customer.name,
       phone: customer.phone,
-      prices: customer.prices
+      prices: customer.prices,
+      initial_debt: customer.initialDebt || 0,
+      initial_debt_collected: customer.initialDebtCollected || 0
     });
   } catch (e) { console.error(e); }
 }
@@ -669,7 +671,11 @@ function renderCustomers() {
     const cSales = state.sales.filter(s => s.customerId === customer.id);
     const totalSales = cSales.reduce((sum, item) => sum + (item.quantity * item.price), 0);
     const totalCollected = cSales.reduce((sum, item) => sum + (item.payments || []).reduce((s, p) => s + p.amount, 0), 0);
-    const uncollected = totalSales - totalCollected;
+    
+    const initialDebtVal = customer.initialDebt || 0;
+    const initialCollectedVal = customer.initialDebtCollected || 0;
+    const initialUncollected = Math.max(0, initialDebtVal - initialCollectedVal);
+    const uncollected = (totalSales - totalCollected) + initialUncollected;
 
     const prices = customer.prices || { '1818': 0, '1818t': 0, '3030': 0, '3030t': 0, '4060': 0, 'pyeong': 0, 'extra': 0 };
 
@@ -692,7 +698,9 @@ function renderCustomers() {
       <td class="p-3 text-gray-300">${totalSales.toLocaleString()}원</td>
       <td class="p-3 text-rose-400 font-semibold">
         <div class="flex items-center justify-between gap-1.5">
-          <span>${uncollected.toLocaleString()}원</span>
+          <span class="cursor-pointer hover:underline text-rose-300 flex items-center gap-1" onclick="openMonthlyDebtModal('${customer.id}', '${customer.name.replace(/'/g, "\\'")}', ${uncollected})">
+            ${uncollected.toLocaleString()}원 <i data-lucide="eye" class="w-3 h-3 text-rose-400/60 inline"></i>
+          </span>
           ${uncollected > 0 ? `
             <button onclick="openDebtCollectModal('${customer.id}', '${customer.name.replace(/'/g, "\\'")}', ${uncollected})" class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all font-semibold" title="이월 미수금 일괄 수금">
               입금
@@ -1438,9 +1446,9 @@ function renderAll() {
 // 5. Actions & Mutation Event Listeners
 
 // 5.1. Customer Actions
-function addCustomer(name, phone, prices) {
+function addCustomer(name, phone, prices, initialDebt) {
   const id = 'cust-' + Date.now();
-  const newCust = { id, name, phone, prices };
+  const newCust = { id, name, phone, prices, initialDebt: Number(initialDebt) || 0 };
   state.customers.push(newCust);
   saveState();
   pushCustomer(newCust);
@@ -1729,6 +1737,7 @@ function initForms() {
     e.preventDefault();
     const name = document.getElementById('cust-name').value.trim();
     const phone = document.getElementById('cust-phone').value.trim();
+    const initialDebt = document.getElementById('cust-initial-debt').value;
     
     const prices = {
       '1818': Number(document.getElementById('cust-price-1818').value) || 0,
@@ -1741,7 +1750,7 @@ function initForms() {
     };
 
     if (!name) return;
-    addCustomer(name, phone, prices);
+    addCustomer(name, phone, prices, initialDebt);
     document.getElementById('customer-form').reset();
   });
 
@@ -2007,6 +2016,13 @@ function initForms() {
   if (closeDebtModalBtn) {
     closeDebtModalBtn.addEventListener('click', () => {
       document.getElementById('debt-collect-modal').classList.add('hidden');
+    });
+  }
+
+  const closeMonthlyDebtModalBtn = document.getElementById('close-monthly-debt-modal-btn');
+  if (closeMonthlyDebtModalBtn) {
+    closeMonthlyDebtModalBtn.addEventListener('click', () => {
+      document.getElementById('customer-monthly-debt-modal').classList.add('hidden');
     });
   }
 
@@ -2294,6 +2310,7 @@ function initForms() {
 
       customer.name = document.getElementById('edit-cust-name').value.trim();
       customer.phone = document.getElementById('edit-cust-phone').value.trim();
+      customer.initialDebt = Number(document.getElementById('edit-cust-initial-debt').value) || 0;
       customer.prices = {
         '1818': Number(document.getElementById('edit-cust-price-1818').value) || 0,
         '1818t': Number(document.getElementById('edit-cust-price-1818t').value) || 0,
@@ -2450,6 +2467,7 @@ window.openCustomerEditModal = function(id) {
   document.getElementById('edit-cust-id').value = customer.id;
   document.getElementById('edit-cust-name').value = customer.name;
   document.getElementById('edit-cust-phone').value = customer.phone || '';
+  document.getElementById('edit-cust-initial-debt').value = customer.initialDebt || 0;
 
   const prices = customer.prices || {};
   document.getElementById('edit-cust-price-1818').value = prices['1818'] || 0;
@@ -2523,6 +2541,25 @@ window.openDebtCollectModal = function(customerId, customerName, uncollectedAmou
 };
 
 window.collectDebtFromOlderSales = async function(customerId, payDate, payAmount) {
+  let remaining = payAmount;
+  let updatedCount = 0;
+
+  // 0) 기초 미수금(이전 미수 잔액) 우선 차감
+  const customer = state.customers.find(c => c.id === customerId);
+  if (customer) {
+    const initialDebtVal = customer.initialDebt || 0;
+    const initialCollectedVal = customer.initialDebtCollected || 0;
+    const initialUncollected = Math.max(0, initialDebtVal - initialCollectedVal);
+    
+    if (initialUncollected > 0) {
+      const applyAmount = Math.min(remaining, initialUncollected);
+      customer.initialDebtCollected = initialCollectedVal + applyAmount;
+      remaining -= applyAmount;
+      await pushCustomer(customer);
+      updatedCount++;
+    }
+  }
+
   // 1) 해당 거래처의 모든 판매 건 필터링
   const clientSales = state.sales.filter(s => s.customerId === customerId);
   
@@ -2536,9 +2573,6 @@ window.collectDebtFromOlderSales = async function(customerId, payDate, payAmount
   
   // 3) 판매 일자 기준 오름차순(오래된 날짜 우선)으로 정렬
   unpaidSales.sort((a, b) => new Date(a.saleDate) - new Date(b.saleDate));
-  
-  let remaining = payAmount;
-  let updatedCount = 0;
   
   for (const item of unpaidSales) {
     if (remaining <= 0) break;
@@ -2570,5 +2604,118 @@ window.collectDebtFromOlderSales = async function(customerId, payDate, payAmount
   } else {
     alert('반영할 미수금 내역이 없습니다.');
   }
+};
+
+// 4.5.3. 거래처 월별 누적 미수금 모달 및 장부 연동
+window.openMonthlyDebtModal = function(customerId, customerName, totalUncollected) {
+  const customer = state.customers.find(c => c.id === customerId);
+  if (!customer) return;
+
+  document.getElementById('monthly-debt-modal-cust-name').textContent = customerName;
+  document.getElementById('monthly-debt-modal-total-uncollected').textContent = totalUncollected.toLocaleString() + '원';
+
+  const listContainer = document.getElementById('monthly-debt-modal-list');
+  listContainer.innerHTML = '';
+
+  // 1) 기초 미수금(이전 이월) 렌더링
+  const initialDebtVal = customer.initialDebt || 0;
+  const initialCollectedVal = customer.initialDebtCollected || 0;
+  const initialUncollected = Math.max(0, initialDebtVal - initialCollectedVal);
+  
+  if (initialUncollected > 0) {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-emerald-950/20 cursor-pointer';
+    tr.innerHTML = `
+      <td class="py-2 pl-1 font-semibold text-slate-300">이전 이월 (기초 미수)</td>
+      <td class="py-2 text-right text-gray-400">${initialDebtVal.toLocaleString()}원</td>
+      <td class="py-2 text-right text-rose-400 font-bold">${initialUncollected.toLocaleString()}원</td>
+    `;
+    tr.onclick = () => goSalesTabWithFilter(customerId, '');
+    listContainer.appendChild(tr);
+  }
+
+  // 2) 월별 거래 미수금 계산 및 정렬
+  const clientSales = state.sales.filter(s => s.customerId === customerId);
+  const monthlyData = {};
+
+  clientSales.forEach(sale => {
+    const month = sale.saleDate.substring(0, 7); // "YYYY-MM"
+    const total = sale.quantity * sale.price;
+    const collected = (sale.payments || []).reduce((sum, p) => sum + p.amount, 0);
+    const uncollected = total - collected;
+
+    if (!monthlyData[month]) {
+      monthlyData[month] = { totalSales: 0, totalUncollected: 0 };
+    }
+    monthlyData[month].totalSales += total;
+    monthlyData[month].totalUncollected += uncollected;
+  });
+
+  // 월별 오름차순 정렬하여 렌더링
+  const sortedMonths = Object.keys(monthlyData).sort();
+  let hasActiveMonthDebt = false;
+
+  sortedMonths.forEach(month => {
+    const data = monthlyData[month];
+    if (data.totalUncollected > 0) {
+      hasActiveMonthDebt = true;
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-emerald-950/20 cursor-pointer';
+      tr.innerHTML = `
+        <td class="py-2 pl-1 text-emerald-400 underline font-semibold">${month}</td>
+        <td class="py-2 text-right text-gray-400">${data.totalSales.toLocaleString()}원</td>
+        <td class="py-2 text-right text-rose-400 font-bold">${data.totalUncollected.toLocaleString()}원</td>
+      `;
+      tr.onclick = () => goSalesTabWithFilter(customerId, month);
+      listContainer.appendChild(tr);
+    }
+  });
+
+  if (initialUncollected <= 0 && !hasActiveMonthDebt) {
+    listContainer.innerHTML = '<tr><td colspan="3" class="text-center text-gray-500 py-4">남은 미수금이 없습니다. 깔끔합니다!</td></tr>';
+  }
+
+  if (window.lucide) window.lucide.createIcons();
+  document.getElementById('customer-monthly-debt-modal').classList.remove('hidden');
+};
+
+window.goSalesTabWithFilter = function(customerId, yearMonth) {
+  // 1) 판매 대장 탭(sales) 클릭 트리거
+  const salesTab = document.querySelector('.nav-tab[data-section="sales"]');
+  if (salesTab) salesTab.click();
+
+  // 2) 필터 컴포넌트 세팅
+  const customerDropdown = document.getElementById('filter-sale-customer');
+  if (customerDropdown) {
+    customerDropdown.value = customerId;
+    customerDropdown.dispatchEvent(new Event('change'));
+  }
+
+  const startDateInput = document.getElementById('filter-sale-start-date');
+  const endDateInput = document.getElementById('filter-sale-end-date');
+
+  if (yearMonth) {
+    const [year, month] = yearMonth.split('-');
+    const firstDay = `${yearMonth}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const lastDayStr = `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
+
+    if (startDateInput) startDateInput.value = firstDay;
+    if (endDateInput) endDateInput.value = lastDayStr;
+  } else {
+    if (startDateInput) startDateInput.value = '';
+    if (endDateInput) endDateInput.value = '';
+  }
+
+  // 3) 필터 상태값 갱신
+  if (startDateInput) filters.startDate = startDateInput.value;
+  if (endDateInput) filters.endDate = endDateInput.value;
+  if (customerDropdown) filters.customerId = customerId;
+
+  // 4) 렌더링 갱신
+  renderSales();
+
+  // 5) 모달 닫기
+  document.getElementById('customer-monthly-debt-modal').classList.add('hidden');
 };
 

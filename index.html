@@ -293,6 +293,11 @@
                 <input type="text" id="cust-phone" placeholder="예: 010-1234-5678"
                   class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
               </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">기초 미수금 (이전 미수 잔액)</label>
+                <input type="number" id="cust-initial-debt" placeholder="0"
+                  class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+              </div>
               <div class="border-t border-zandiBorder/20 pt-3">
                 <span class="block text-xs font-semibold text-slate-300 mb-2">잔디 규격별 단가 설정 (원)</span>
                 <div class="grid grid-cols-2 gap-2 text-xs">
@@ -1076,6 +1081,50 @@
     </div>
   </div>
 
+  <!-- 4.6. 거래처 월별 누적 미수금 현황 팝업 -->
+  <div id="customer-monthly-debt-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden">
+    <div class="glass-panel p-6 max-w-md w-full mx-4 border border-zandiBorder">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i data-lucide="calendar-days" class="text-emerald-400"></i> 월별 누적 미수 현황
+        </h3>
+        <button id="close-monthly-debt-modal-btn" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-sm">
+        <div class="p-3 bg-black/35 rounded-lg border border-zandiBorder/35 space-y-1">
+          <div class="flex justify-between"><span class="text-slate-400 text-xs">거래처:</span><span id="monthly-debt-modal-cust-name" class="font-semibold text-white">-</span></div>
+          <div class="flex justify-between font-bold text-rose-400 mt-2">
+            <span>총 미수 잔액:</span>
+            <span id="monthly-debt-modal-total-uncollected">-</span>
+          </div>
+        </div>
+
+        <div>
+          <span class="block text-xs font-semibold text-slate-300 mb-2">월별 미수 누적 상세 (클릭 시 해당 월 장부로 이동)</span>
+          <div class="overflow-x-auto max-h-[250px] overflow-y-auto pr-1">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="text-zandiTextMuted border-b border-zandiBorder/20">
+                  <th class="pb-1.5 pl-1">발생 연월</th>
+                  <th class="pb-1.5 text-right">거래액</th>
+                  <th class="pb-1.5 text-right text-rose-400">남은 미수금</th>
+                </tr>
+              </thead>
+              <tbody id="monthly-debt-modal-list" class="divide-y divide-zandiBorder/10">
+                <!-- JS dynamically populates -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <p class="text-[10px] text-slate-500">※ 월별 항목을 누르시면 해당 월의 세부 거래 장부(판매 대장) 화면으로 즉시 이동합니다.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- 4. 거래처 수정 모달 -->
   <div id="customer-edit-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden">
     <div class="glass-panel p-6 max-w-md w-full mx-4 border border-zandiBorder">
@@ -1097,6 +1146,11 @@
         <div>
           <label class="block text-xs text-slate-400 mb-1">연락처</label>
           <input type="text" id="edit-cust-phone"
+            class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">기초 미수금 (이전 미수 잔액)</label>
+          <input type="number" id="edit-cust-initial-debt" placeholder="0"
             class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
         </div>
         <div class="border-t border-zandiBorder/20 pt-3">
