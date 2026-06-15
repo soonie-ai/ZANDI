@@ -32,7 +32,7 @@
     }
   </script>
   <!-- CSS Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=9">
+  <link rel="stylesheet" href="styles.css?v=10">
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -780,6 +780,12 @@
             <table class="w-full text-left text-sm min-w-[1050px]" id="rent-main-table">
               <thead>
                 <tr class="text-xs text-zandiTextMuted border-b border-zandiBorder/40">
+                  <th class="pb-2 pl-2 no-print w-12 text-center">
+                    <label class="custom-checkbox inline-block">
+                      <input type="checkbox" id="rent-print-all-check" checked onchange="toggleAllRentPrintChecks(this)">
+                      <span class="checkmark"></span>
+                    </label>
+                  </th>
                   <th class="pb-2 pl-2">임대인</th>
                   <th class="pb-2">휴대번호</th>
                   <th class="pb-2">주소</th>
@@ -1266,6 +1272,6 @@
   <!-- Supabase JS Client CDN -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <!-- Application Logic -->
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

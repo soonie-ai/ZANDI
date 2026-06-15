@@ -558,9 +558,19 @@ input, select, textarea {
     margin: 10mm 15mm;
   }
   
-  body {
+  /* 모든 요소의 배경 이미지, 그림자 제거 */
+  *, *::before, *::after {
+    background-image: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  body, #main-app, main, #rent-section, #rent-table-panel, .glass-panel {
     background: white !important;
     color: black !important;
+  }
+
+  body {
     font-size: 10pt !important;
   }
 
@@ -667,6 +677,7 @@ input, select, textarea {
   }
 
   /* 인쇄에서 제외할 핵심 항목 외의 칼럼 숨김 처리 */
+  .print-exclude,
   .print-hide {
     display: none !important;
   }

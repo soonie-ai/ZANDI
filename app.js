@@ -1185,8 +1185,15 @@ function renderRent() {
       const payNext = !!(rent.yearlyPayments && rent.yearlyPayments[String(yearNext)]);
 
       const tr = document.createElement('tr');
+      tr.id = `rent-row-${rent.id}`;
       tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20 text-xs';
       tr.innerHTML = `
+        <td class="p-3 text-center no-print w-12">
+          <label class="custom-checkbox inline-block">
+            <input type="checkbox" class="rent-print-row-check" checked data-rent-id="${rent.id}" onchange="toggleRentPrintRow(this)">
+            <span class="checkmark"></span>
+          </label>
+        </td>
         <td class="p-3 text-white font-medium pl-2">${rent.ownerName || '-'}</td>
         <td class="p-3 text-gray-300">${rent.phone || '-'}</td>
         <td class="p-3 text-gray-300 max-w-[150px] truncate" title="${rent.address || ''}">${rent.address || '-'}</td>
@@ -1253,6 +1260,43 @@ function addRent(ownerName, phone, address, area, amount, bankAccount, yearlyPay
   pushRent(newRent);
   renderAll();
 }
+
+window.toggleRentPrintRow = function(checkbox) {
+  const rentId = checkbox.dataset.rentId;
+  const row = document.getElementById(`rent-row-${rentId}`);
+  if (row) {
+    if (checkbox.checked) {
+      row.classList.remove('print-exclude');
+    } else {
+      row.classList.add('print-exclude');
+    }
+  }
+  
+  // 전체 선택 체크박스 상태 업데이트
+  const allChecks = document.querySelectorAll('.rent-print-row-check');
+  const checkedCount = document.querySelectorAll('.rent-print-row-check:checked').length;
+  const allCheckHeader = document.getElementById('rent-print-all-check');
+  if (allCheckHeader) {
+    allCheckHeader.checked = (allChecks.length === checkedCount);
+  }
+};
+
+window.toggleAllRentPrintChecks = function(headerCheckbox) {
+  const isChecked = headerCheckbox.checked;
+  const rowCheckboxes = document.querySelectorAll('.rent-print-row-check');
+  rowCheckboxes.forEach(cb => {
+    cb.checked = isChecked;
+    const rentId = cb.dataset.rentId;
+    const row = document.getElementById(`rent-row-${rentId}`);
+    if (row) {
+      if (isChecked) {
+        row.classList.remove('print-exclude');
+      } else {
+        row.classList.add('print-exclude');
+      }
+    }
+  });
+};
 
 window.deleteRent = function(id) {
   if (confirm('이 임대 계약 내역을 삭제하시겠습니까?')) {
