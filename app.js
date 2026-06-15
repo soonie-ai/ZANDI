@@ -52,9 +52,8 @@ const INITIAL_ATTENDANCE = [
 ];
 
 const INITIAL_RENTS = [
-  { id: 'rent-1', village: '평리', landName: '105번지 길가밭', amount: 1200000, isPaid: true, paymentDate: '2026-06-10', notes: '연 단위 계약 완료' },
-  { id: 'rent-2', village: '송정리', landName: '송정길 12 농지', amount: 800000, isPaid: false, paymentDate: '', notes: '도지세 잔여분 80만원 미납' },
-  { id: 'rent-3', village: '평리', landName: '평리 삼거리 안쪽밭', amount: 1500000, isPaid: false, paymentDate: '', notes: '2026년 계약금 미납' }
+  { id: 'rent-1', ownerName: '홍길동', phone: '010-1111-2222', address: '평리 105번지 길가밭', area: 500, amount: 1200000, bankAccount: '농협 302-1234-5678-01', yearlyPayments: { '2025': true, '2026': true }, paymentDate: '2026-06-10', notes: '연 단위 계약 완료' },
+  { id: 'rent-2', ownerName: '이몽룡', phone: '010-3333-4444', address: '송정리 송정길 12 농지', area: 300, amount: 800000, bankAccount: '신한 110-987-654321', yearlyPayments: { '2025': true, '2026': false }, paymentDate: '', notes: '도지세 잔여분 80만원 미납' }
 ];
 
 // App Data State
@@ -98,6 +97,7 @@ let dashCalendarMonth = new Date().getMonth();
 
 // Supabase Global Client
 let supabaseClient = null;
+let realtimeChannel = null;
 
 // Modal State
 let currentActiveSaleId = null;
@@ -162,6 +162,7 @@ async function initSupabase() {
         indicator.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block mr-1"></span> 부부 실시간 연동중';
       }
       await pullFromSupabase();
+      subscribeToRealtime();
     } catch (e) {
       console.error("Supabase connection error:", e);
       if (indicator) {
@@ -173,6 +174,23 @@ async function initSupabase() {
       indicator.innerHTML = '<span class="w-2 h-2 rounded-full bg-neutral-600 inline-block mr-1"></span> 로컬 전용 모드';
     }
   }
+}
+
+function subscribeToRealtime() {
+  if (!supabaseClient) return;
+  
+  if (realtimeChannel) {
+    supabaseClient.removeChannel(realtimeChannel);
+  }
+  
+  realtimeChannel = supabaseClient.channel('zandi-realtime-sync')
+    .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+      console.log('Realtime change detected:', payload);
+      pullFromSupabase();
+    })
+    .subscribe((status) => {
+      console.log('Realtime subscription status:', status);
+    });
 }
 
 async function pullFromSupabase() {
@@ -220,12 +238,15 @@ async function pullFromSupabase() {
     if (ren && ren.length > 0) {
       state.rents = ren.map(r => ({
         id: r.id,
-        village: r.village,
-        landName: r.land_name,
-        amount: r.amount,
-        isPaid: r.is_paid,
-        paymentDate: r.payment_date,
-        notes: r.notes
+        ownerName: r.ownerName || '',
+        phone: r.phone || '',
+        address: r.address || '',
+        area: Number(r.area) || 0,
+        amount: Number(r.amount) || 0,
+        bankAccount: r.bankAccount || '',
+        yearlyPayments: r.yearlyPayments || {},
+        paymentDate: r.paymentDate || '',
+        notes: r.notes || ''
       }));
     }
 
@@ -323,11 +344,14 @@ async function pushRent(rent) {
   try {
     await supabaseClient.from('rents').upsert({
       id: rent.id,
-      village: rent.village,
-      land_name: rent.landName,
+      ownerName: rent.ownerName,
+      phone: rent.phone,
+      address: rent.address,
+      area: rent.area,
       amount: rent.amount,
-      is_paid: rent.isPaid,
-      payment_date: rent.paymentDate,
+      bankAccount: rent.bankAccount,
+      yearlyPayments: rent.yearlyPayments,
+      paymentDate: rent.paymentDate,
       notes: rent.notes
     });
   } catch (e) { console.error(e); }
@@ -811,20 +835,24 @@ function renderAttendance() {
     // checklist checkbox row render
     if (workersChecklistContainer) {
       const div = document.createElement('div');
-      div.className = 'flex items-center justify-between bg-black/20 p-2 rounded-lg border border-zandiBorder/40 text-xs';
+      div.className = 'flex items-center justify-between bg-black/20 p-2 rounded-lg border border-zandiBorder/40 text-xs gap-2';
       div.innerHTML = `
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5 min-w-0">
           <label class="custom-checkbox">
             <input type="checkbox" class="att-worker-check" value="${worker.id}">
             <span class="checkmark"></span>
-            <span class="text-xs text-white font-medium">${worker.name}</span>
+            <span class="text-xs text-white font-medium truncate inline-block max-w-[80px]" title="${worker.name}">${worker.name}</span>
           </label>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5 flex-shrink-0">
           <select class="att-worker-type bg-black/40 border border-zandiBorder text-white text-[11px] rounded p-1">
             <option value="1.0">하루 (1.0)</option>
             <option value="0.5">반나절 (0.5)</option>
           </select>
+          <div class="flex items-center gap-0.5">
+            <input type="number" class="att-worker-wage bg-black/40 border border-zandiBorder text-emerald-400 text-[11px] rounded p-1 w-16 text-right font-semibold" value="${worker.baseDailyWage}" placeholder="일당">
+            <span class="text-[9px] text-slate-500">원</span>
+          </div>
           <label class="custom-checkbox">
             <input type="checkbox" class="att-worker-paid">
             <span class="checkmark"></span>
@@ -833,6 +861,20 @@ function renderAttendance() {
         </div>
       `;
       workersChecklistContainer.appendChild(div);
+
+      // 드롭다운 변경 시 입력 칸의 기본값 자동 변경
+      const select = div.querySelector('.att-worker-type');
+      const wageInput = div.querySelector('.att-worker-wage');
+      if (select && wageInput) {
+        select.addEventListener('change', () => {
+          const val = Number(select.value);
+          if (val === 1.0) {
+            wageInput.value = worker.baseDailyWage;
+          } else if (val === 0.5) {
+            wageInput.value = Math.round(worker.baseDailyWage * 0.5);
+          }
+        });
+      }
     }
 
     if (filterWorkerDropdown) {
@@ -1048,38 +1090,29 @@ function renderAttendanceMatrix() {
 // 4.5. Land Rent View
 function renderRent() {
   const rentList = document.getElementById('rent-list');
-  const filterVillageSelect = document.getElementById('filter-rent-village');
-  
   if (!rentList) return;
 
-  const savedFilterVillageValue = filterVillageSelect ? filterVillageSelect.value : '';
-
-  // Get unique villages for filter
-  const villages = [...new Set(state.rents.map(r => r.village))].filter(Boolean);
-  if (filterVillageSelect) {
-    filterVillageSelect.innerHTML = '<option value="">전체 동네</option>';
-    villages.forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = v;
-      opt.textContent = v;
-      filterVillageSelect.appendChild(opt);
-    });
-    filterVillageSelect.value = savedFilterVillageValue;
-  }
+  const rentSearch = document.getElementById('filter-rent-search')?.value.trim().toLowerCase() || '';
+  const filterPaid2026 = document.getElementById('filter-rent-paid-2026')?.value || '';
 
   // Filter rents
   let filteredRents = state.rents.filter(rent => {
-    if (rentFilters.village && rent.village !== rentFilters.village) return false;
-    if (rentFilters.isPaid !== '') {
-      const isPaidBool = rentFilters.isPaid === 'true';
-      if (rent.isPaid !== isPaidBool) return false;
+    if (rentSearch) {
+      const owner = (rent.ownerName || '').toLowerCase();
+      const addr = (rent.address || '').toLowerCase();
+      if (!owner.includes(rentSearch) && !addr.includes(rentSearch)) return false;
+    }
+    if (filterPaid2026 !== '') {
+      const isPaid = !!(rent.yearlyPayments && rent.yearlyPayments['2026']);
+      const expected = filterPaid2026 === 'true';
+      if (isPaid !== expected) return false;
     }
     return true;
   });
 
   // Calculate Metrics
   const totalAmount = state.rents.reduce((sum, r) => sum + Number(r.amount), 0);
-  const paidAmount = state.rents.filter(r => r.isPaid).reduce((sum, r) => sum + Number(r.amount), 0);
+  const paidAmount = state.rents.filter(r => r.yearlyPayments && r.yearlyPayments['2026']).reduce((sum, r) => sum + Number(r.amount), 0);
   const unpaidAmount = totalAmount - paidAmount;
 
   document.getElementById('rent-total-amount').textContent = totalAmount.toLocaleString() + '원';
@@ -1089,30 +1122,51 @@ function renderRent() {
   // Render Table
   rentList.innerHTML = '';
   if (filteredRents.length === 0) {
-    rentList.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500 text-xs">등록된 토지 임대 내역이 없습니다.</td></tr>';
+    rentList.innerHTML = '<tr><td colspan="12" class="p-4 text-center text-gray-500 text-xs">등록된 토지 임대 내역이 없습니다.</td></tr>';
   } else {
     filteredRents.forEach(rent => {
+      const pay2025 = !!(rent.yearlyPayments && rent.yearlyPayments['2025']);
+      const pay2026 = !!(rent.yearlyPayments && rent.yearlyPayments['2026']);
+      const pay2027 = !!(rent.yearlyPayments && rent.yearlyPayments['2027']);
+
       const tr = document.createElement('tr');
-      tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
+      tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20 text-xs';
       tr.innerHTML = `
-        <td class="p-3 text-white font-medium">${rent.village}</td>
-        <td class="p-3 text-gray-300">${rent.landName}</td>
+        <td class="p-3 text-white font-medium">${rent.ownerName || '-'}</td>
+        <td class="p-3 text-gray-300">${rent.phone || '-'}</td>
+        <td class="p-3 text-gray-300 max-w-[150px] truncate" title="${rent.address || ''}">${rent.address || '-'}</td>
+        <td class="p-3 text-center text-gray-300">${rent.area ? rent.area + '평' : '-'}</td>
         <td class="p-3 text-right text-emerald-400 font-bold">${Number(rent.amount).toLocaleString()}원</td>
+        <td class="p-3 text-gray-300 max-w-[120px] truncate" title="${rent.bankAccount || ''}">${rent.bankAccount || '-'}</td>
         <td class="p-3 text-center">
-          <span onclick="toggleRentPayment('${rent.id}')" class="cursor-pointer px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-            rent.isPaid 
-              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-              : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-          }">
-            ${rent.isPaid ? '지급완료' : '미지급'}
-          </span>
+          <label class="custom-checkbox inline-block">
+            <input type="checkbox" ${pay2025 ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '2025')">
+            <span class="checkmark"></span>
+          </label>
+        </td>
+        <td class="p-3 text-center">
+          <label class="custom-checkbox inline-block">
+            <input type="checkbox" ${pay2026 ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '2026')">
+            <span class="checkmark"></span>
+          </label>
+        </td>
+        <td class="p-3 text-center">
+          <label class="custom-checkbox inline-block">
+            <input type="checkbox" ${pay2027 ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '2027')">
+            <span class="checkmark"></span>
+          </label>
         </td>
         <td class="p-3 text-gray-400">${rent.paymentDate || '-'}</td>
-        <td class="p-3 text-gray-400">${rent.notes || '-'}</td>
+        <td class="p-3 text-gray-400 max-w-[120px] truncate" title="${rent.notes || ''}">${rent.notes || '-'}</td>
         <td class="p-3 text-center">
-          <button onclick="deleteRent('${rent.id}')" class="text-rose-400 hover:text-rose-300 p-1">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
+          <div class="flex items-center justify-center gap-1.5">
+            <button onclick="openRentEditModal('${rent.id}')" class="text-emerald-400 hover:text-emerald-300 p-1">
+              <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="deleteRent('${rent.id}')" class="text-rose-400 hover:text-rose-300 p-1">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
         </td>
       `;
       rentList.appendChild(tr);
@@ -1123,15 +1177,18 @@ function renderRent() {
 }
 
 // Rent Actions
-function addRent(village, landName, amount, isPaid, paymentDate, notes) {
+function addRent(ownerName, phone, address, area, amount, bankAccount, yearlyPayments, paymentDate, notes) {
   const id = 'rent-' + Date.now();
   const newRent = {
     id,
-    village,
-    landName,
-    amount: Number(amount),
-    isPaid: isPaid === 'true' || isPaid === true,
-    paymentDate: (isPaid === 'true' || isPaid === true) ? (paymentDate || new Date().toISOString().split('T')[0]) : '',
+    ownerName,
+    phone,
+    address,
+    area: Number(area) || 0,
+    amount: Number(amount) || 0,
+    bankAccount,
+    yearlyPayments: yearlyPayments || {},
+    paymentDate,
     notes
   };
   state.rents.push(newRent);
@@ -1149,19 +1206,40 @@ window.deleteRent = function(id) {
   }
 };
 
-window.toggleRentPayment = function(id) {
+window.toggleRentYear = function(id, year) {
   const rent = state.rents.find(r => r.id === id);
   if (rent) {
-    rent.isPaid = !rent.isPaid;
-    if (rent.isPaid) {
+    if (!rent.yearlyPayments) rent.yearlyPayments = {};
+    rent.yearlyPayments[year] = !rent.yearlyPayments[year];
+    if (rent.yearlyPayments[year]) {
       rent.paymentDate = new Date().toISOString().split('T')[0];
-    } else {
-      rent.paymentDate = '';
     }
     saveState();
     pushRent(rent);
     renderAll();
   }
+};
+
+window.openRentEditModal = function(id) {
+  const rent = state.rents.find(r => r.id === id);
+  if (!rent) return;
+  
+  document.getElementById('edit-rent-id').value = rent.id;
+  document.getElementById('edit-rent-owner-name').value = rent.ownerName || '';
+  document.getElementById('edit-rent-phone').value = rent.phone || '';
+  document.getElementById('edit-rent-address').value = rent.address || '';
+  document.getElementById('edit-rent-area').value = rent.area || '';
+  document.getElementById('edit-rent-amount').value = rent.amount || '';
+  document.getElementById('edit-rent-bank-account').value = rent.bankAccount || '';
+  
+  document.getElementById('edit-rent-year-2025').checked = !!(rent.yearlyPayments && rent.yearlyPayments['2025']);
+  document.getElementById('edit-rent-year-2026').checked = !!(rent.yearlyPayments && rent.yearlyPayments['2026']);
+  document.getElementById('edit-rent-year-2027').checked = !!(rent.yearlyPayments && rent.yearlyPayments['2027']);
+  
+  document.getElementById('edit-rent-pay-date').value = rent.paymentDate || '';
+  document.getElementById('edit-rent-notes').value = rent.notes || '';
+  
+  document.getElementById('rent-edit-modal').classList.remove('hidden');
 };
 
 function renderAll() {
@@ -1534,6 +1612,11 @@ function initForms() {
         const paidInput = row.querySelector('.att-worker-paid');
         const isPaid = paidInput ? paidInput.checked : false;
 
+        const wageInput = row.querySelector('.att-worker-wage');
+        const enteredWage = wageInput ? Number(wageInput.value) : worker.baseDailyWage;
+        // dailyWage = 입력된 금액 / 근무일수(workType)
+        const dailyWage = workType > 0 ? (enteredWage / workType) : enteredWage;
+
         // 고유 ID 생성 (동시 등록 시 밀리초 겹치지 않게 난수 결합)
         const id = 'att-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
         const newAtt = {
@@ -1541,7 +1624,7 @@ function initForms() {
           workerId,
           workDate,
           workType,
-          dailyWage: worker.baseDailyWage,
+          dailyWage,
           isPaid
         };
         state.attendance.push(newAtt);
@@ -1742,33 +1825,79 @@ function initForms() {
   if (rentForm) {
     rentForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const village = document.getElementById('rent-village').value.trim();
-      const landName = document.getElementById('rent-land').value.trim();
+      const ownerName = document.getElementById('rent-owner-name').value.trim();
+      const phone = document.getElementById('rent-phone').value.trim();
+      const address = document.getElementById('rent-address').value.trim();
+      const area = document.getElementById('rent-area').value;
       const amount = document.getElementById('rent-amount').value;
-      const isPaid = document.getElementById('rent-is-paid').value;
+      const bankAccount = document.getElementById('rent-bank-account').value.trim();
+      
+      const yearlyPayments = {};
+      document.querySelectorAll('.rent-register-year').forEach(cb => {
+        if (cb.checked) {
+          yearlyPayments[cb.value] = true;
+        }
+      });
+      
       const paymentDate = document.getElementById('rent-pay-date').value;
       const notes = document.getElementById('rent-notes').value.trim();
 
-      addRent(village, landName, amount, isPaid, paymentDate, notes);
+      addRent(ownerName, phone, address, area, amount, bankAccount, yearlyPayments, paymentDate, notes);
       
       rentForm.reset();
       document.getElementById('rent-pay-date').value = '';
     });
   }
 
-  const filterRentVillage = document.getElementById('filter-rent-village');
-  if (filterRentVillage) {
-    filterRentVillage.addEventListener('change', () => {
-      rentFilters.village = filterRentVillage.value;
+  const rentSearchInput = document.getElementById('filter-rent-search');
+  if (rentSearchInput) {
+    rentSearchInput.addEventListener('input', () => {
       renderRent();
     });
   }
 
-  const filterRentPaid = document.getElementById('filter-rent-paid');
-  if (filterRentPaid) {
-    filterRentPaid.addEventListener('change', () => {
-      rentFilters.isPaid = filterRentPaid.value;
+  const filterRentPaid2026 = document.getElementById('filter-rent-paid-2026');
+  if (filterRentPaid2026) {
+    filterRentPaid2026.addEventListener('change', () => {
       renderRent();
+    });
+  }
+
+  const editRentForm = document.getElementById('edit-rent-form');
+  if (editRentForm) {
+    editRentForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('edit-rent-id').value;
+      const rent = state.rents.find(r => r.id === id);
+      if (!rent) return;
+      
+      rent.ownerName = document.getElementById('edit-rent-owner-name').value.trim();
+      rent.phone = document.getElementById('edit-rent-phone').value.trim();
+      rent.address = document.getElementById('edit-rent-address').value.trim();
+      rent.area = Number(document.getElementById('edit-rent-area').value) || 0;
+      rent.amount = Number(document.getElementById('edit-rent-amount').value) || 0;
+      rent.bankAccount = document.getElementById('edit-rent-bank-account').value.trim();
+      
+      if (!rent.yearlyPayments) rent.yearlyPayments = {};
+      rent.yearlyPayments['2025'] = document.getElementById('edit-rent-year-2025').checked;
+      rent.yearlyPayments['2026'] = document.getElementById('edit-rent-year-2026').checked;
+      rent.yearlyPayments['2027'] = document.getElementById('edit-rent-year-2027').checked;
+      
+      rent.paymentDate = document.getElementById('edit-rent-pay-date').value;
+      rent.notes = document.getElementById('edit-rent-notes').value.trim();
+      
+      saveState();
+      await pushRent(rent);
+      renderAll();
+      
+      document.getElementById('rent-edit-modal').classList.add('hidden');
+    });
+  }
+
+  const closeRentEditModalBtn = document.getElementById('close-rent-edit-modal-btn');
+  if (closeRentEditModalBtn) {
+    closeRentEditModalBtn.addEventListener('click', () => {
+      document.getElementById('rent-edit-modal').classList.add('hidden');
     });
   }
 
@@ -1896,19 +2025,31 @@ function initForms() {
 
   // 14) 소유주 사장님 이름 연동 및 설정 모달 제어 로직
   const ownerNameInput = document.getElementById('owner-name-input');
+  const settingsOwnerName = document.getElementById('settings-owner-name');
   const ownerAvatar = document.getElementById('owner-avatar');
   if (ownerNameInput) {
     // 저장되어 있는 이름 로드
     const savedName = localStorage.getItem('zandi_owner_name') || '소유주 사장님';
     ownerNameInput.value = savedName;
+    if (settingsOwnerName) settingsOwnerName.value = savedName;
     if (ownerAvatar) ownerAvatar.textContent = savedName.trim().charAt(0) || '社';
 
     ownerNameInput.addEventListener('change', () => {
       const newName = ownerNameInput.value.trim() || '소유주 사장님';
       ownerNameInput.value = newName;
+      if (settingsOwnerName) settingsOwnerName.value = newName;
       localStorage.setItem('zandi_owner_name', newName);
       if (ownerAvatar) ownerAvatar.textContent = newName.charAt(0);
     });
+
+    if (settingsOwnerName) {
+      settingsOwnerName.addEventListener('input', () => {
+        const newName = settingsOwnerName.value.trim() || '소유주 사장님';
+        ownerNameInput.value = newName;
+        localStorage.setItem('zandi_owner_name', newName);
+        if (ownerAvatar) ownerAvatar.textContent = newName.charAt(0);
+      });
+    }
   }
 
   const sidebarSettingsBtn = document.getElementById('sidebar-settings-btn');
