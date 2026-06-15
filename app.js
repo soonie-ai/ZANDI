@@ -690,7 +690,16 @@ function renderCustomers() {
         </div>
       </td>
       <td class="p-3 text-gray-300">${totalSales.toLocaleString()}원</td>
-      <td class="p-3 text-rose-400 font-semibold">${uncollected.toLocaleString()}원</td>
+      <td class="p-3 text-rose-400 font-semibold">
+        <div class="flex items-center justify-between gap-1.5">
+          <span>${uncollected.toLocaleString()}원</span>
+          ${uncollected > 0 ? `
+            <button onclick="openDebtCollectModal('${customer.id}', '${customer.name.replace(/'/g, "\\'")}', ${uncollected})" class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all font-semibold" title="이월 미수금 일괄 수금">
+              입금
+            </button>
+          ` : ''}
+        </div>
+      </td>
       <td class="p-3 text-center">
         <div class="flex items-center justify-center gap-2">
           <button onclick="openCustomerEditModal('${customer.id}')" class="text-emerald-400 hover:text-emerald-300 p-1" title="수정">
@@ -769,8 +778,15 @@ function renderSales() {
     filterAmountTotal += total;
 
     const tr = document.createElement('tr');
+    tr.id = `sale-row-${sale.id}`;
     tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
     tr.innerHTML = `
+      <td class="p-3 text-center pl-2">
+        <label class="custom-checkbox inline-block">
+          <input type="checkbox" class="sale-select-row-check" data-sale-id="${sale.id}" onchange="toggleSaleSelectRow(this)">
+          <span class="checkmark"></span>
+        </label>
+      </td>
       <td class="p-3 text-gray-400">${sale.saleDate}</td>
       <td class="p-3 text-white font-medium">${customer.name}</td>
       <td class="p-3 text-gray-300 font-semibold">${PRODUCT_TYPE_LABELS[sale.productType] || '평당'}</td>
@@ -816,6 +832,69 @@ function renderSales() {
   
   if (window.lucide) window.lucide.createIcons();
 }
+
+window.toggleSaleSelectRow = function(checkbox) {
+  const allChecks = document.querySelectorAll('.sale-select-row-check');
+  const checkedCount = document.querySelectorAll('.sale-select-row-check:checked').length;
+  const allCheckHeader = document.getElementById('sales-select-all-check');
+  if (allCheckHeader) {
+    allCheckHeader.checked = (allChecks.length === checkedCount);
+  }
+};
+
+window.toggleAllSalesSelects = function(headerCheckbox) {
+  const isChecked = headerCheckbox.checked;
+  const rowCheckboxes = document.querySelectorAll('.sale-select-row-check');
+  rowCheckboxes.forEach(cb => {
+    cb.checked = isChecked;
+  });
+};
+
+window.bulkCollectSales = async function() {
+  const checkedBoxes = document.querySelectorAll('.sale-select-row-check:checked');
+  if (checkedBoxes.length === 0) {
+    alert('완납 처리할 거래 내역을 하나 이상 선택해주세요.');
+    return;
+  }
+  
+  if (!confirm(`선택한 ${checkedBoxes.length}건의 거래를 일괄 완납 처리하시겠습니까?`)) {
+    return;
+  }
+  
+  let updatedCount = 0;
+  for (const box of checkedBoxes) {
+    const saleId = box.dataset.saleId;
+    const sale = state.sales.find(s => s.id === saleId);
+    if (sale) {
+      const total = sale.quantity * sale.price;
+      const collected = (sale.payments || []).reduce((sum, p) => sum + p.amount, 0);
+      const uncollected = total - collected;
+      
+      if (uncollected > 0) {
+        if (!sale.payments) sale.payments = [];
+        sale.payments.push({
+          id: 'pay-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+          date: new Date().toISOString().split('T')[0],
+          amount: uncollected
+        });
+        sale.isCollected = true;
+        await pushSale(sale);
+        updatedCount++;
+      }
+    }
+  }
+  
+  if (updatedCount > 0) {
+    saveState();
+    renderAll();
+    alert(`${updatedCount}건의 미수금이 완납 처리되었습니다.`);
+  } else {
+    alert('선택한 항목들이 이미 완납 상태이거나 처리할 항목이 없습니다.');
+  }
+  
+  const allCheckHeader = document.getElementById('sales-select-all-check');
+  if (allCheckHeader) allCheckHeader.checked = false;
+};
 
 // 4.4. Workers / Attendance View
 function renderAttendance() {
@@ -1924,6 +2003,13 @@ function initForms() {
     document.getElementById('payment-modal').classList.add('hidden');
   });
 
+  const closeDebtModalBtn = document.getElementById('close-debt-modal-btn');
+  if (closeDebtModalBtn) {
+    closeDebtModalBtn.addEventListener('click', () => {
+      document.getElementById('debt-collect-modal').classList.add('hidden');
+    });
+  }
+
   const closeDashModalBtn = document.getElementById('close-dash-modal-btn');
   if (closeDashModalBtn) {
     closeDashModalBtn.addEventListener('click', () => {
@@ -1993,6 +2079,21 @@ function initForms() {
 
     openPaymentModal(currentActiveSaleId);
   });
+
+  const debtPaymentForm = document.getElementById('debt-payment-form');
+  if (debtPaymentForm) {
+    debtPaymentForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const customerId = document.getElementById('debt-modal-cust-id').value;
+      const date = document.getElementById('debt-pay-date').value;
+      const amount = Number(document.getElementById('debt-pay-amount').value);
+      
+      if (!customerId || !date || amount <= 0) return;
+      
+      await collectDebtFromOlderSales(customerId, date, amount);
+      document.getElementById('debt-collect-modal').classList.add('hidden');
+    });
+  }
 
   // 11.5) Land Rent Register Form & Filters
   const rentForm = document.getElementById('rent-form');
@@ -2406,5 +2507,68 @@ window.printRentLandscape = function() {
 
   // 2) 브라우저 기본 인쇄 실행 (css의 @media print에서 가로 세팅 자동 적용)
   window.print();
+};
+
+// 4.5.2. 이월 미수금 일괄 입금/수금 관련 액션
+window.openDebtCollectModal = function(customerId, customerName, uncollectedAmount) {
+  document.getElementById('debt-modal-cust-id').value = customerId;
+  document.getElementById('debt-modal-cust-name').textContent = customerName;
+  document.getElementById('debt-modal-uncollected-amount').textContent = uncollectedAmount.toLocaleString() + '원';
+  
+  document.getElementById('debt-pay-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('debt-pay-amount').value = '';
+  document.getElementById('debt-pay-amount').max = uncollectedAmount;
+  
+  document.getElementById('debt-collect-modal').classList.remove('hidden');
+};
+
+window.collectDebtFromOlderSales = async function(customerId, payDate, payAmount) {
+  // 1) 해당 거래처의 모든 판매 건 필터링
+  const clientSales = state.sales.filter(s => s.customerId === customerId);
+  
+  // 2) 미납이 남아 있는 거래들만 추출
+  const unpaidSales = clientSales.map(sale => {
+    const total = sale.quantity * sale.price;
+    const collected = (sale.payments || []).reduce((sum, p) => sum + p.amount, 0);
+    const uncollected = total - collected;
+    return { sale, total, collected, uncollected };
+  }).filter(item => item.uncollected > 0);
+  
+  // 3) 판매 일자 기준 오름차순(오래된 날짜 우선)으로 정렬
+  unpaidSales.sort((a, b) => new Date(a.saleDate) - new Date(b.saleDate));
+  
+  let remaining = payAmount;
+  let updatedCount = 0;
+  
+  for (const item of unpaidSales) {
+    if (remaining <= 0) break;
+    
+    const applyAmount = Math.min(remaining, item.uncollected);
+    if (applyAmount > 0) {
+      const sale = item.sale;
+      if (!sale.payments) sale.payments = [];
+      
+      sale.payments.push({
+        id: 'pay-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+        date: payDate,
+        amount: applyAmount
+      });
+      
+      const newCollected = item.collected + applyAmount;
+      sale.isCollected = (item.total - newCollected) <= 0;
+      
+      remaining -= applyAmount;
+      await pushSale(sale);
+      updatedCount++;
+    }
+  }
+  
+  if (updatedCount > 0) {
+    saveState();
+    renderAll();
+    alert(`이월 미수금 중 총 ${payAmount.toLocaleString()}원이 성공적으로 입금 반영되었습니다.`);
+  } else {
+    alert('반영할 미수금 내역이 없습니다.');
+  }
 };
 
