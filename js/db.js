@@ -46,7 +46,14 @@ async function initSupabase() {
       if (indicator) {
         indicator.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500 inline-block mr-1"></span> 연동 오류';
       }
-      alert(`[Supabase 연동 실패] 주소 또는 Key가 틀렸거나 데이터베이스 설정 오류입니다.\n\n오류 내용: ${e.message || JSON.stringify(e)}`);
+      // alert 대행 - 화면 멈춤 방지를 위해 showToast 활용
+      setTimeout(() => {
+        if (typeof showToast === 'function') {
+          showToast(`[Supabase 연동 실패] 주소/Key가 틀렸거나 RLS 설정 오류입니다.`, 'error');
+        } else {
+          alert(`[Supabase 연동 실패] 주소/Key를 확인해주세요.`);
+        }
+      }, 500);
     }
   } else {
     if (indicator) {
