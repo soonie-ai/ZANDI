@@ -735,79 +735,84 @@ function renderAttendanceMatrix() {
     return;
   }
 
-  // Find all unique dates in attendance (filtered by start/end date filters if any)
-  let dates = [...new Set(state.attendance.map(a => a.workDate))];
-  
-  if (attFilters.startDate) {
-    dates = dates.filter(d => d >= attFilters.startDate);
-  }
-  if (attFilters.endDate) {
-    dates = dates.filter(d => d <= attFilters.endDate);
-  }
-  
-  dates.sort((a, b) => new Date(b) - new Date(a));
-
-  let activeWorkers = state.workers;
-  if (attFilters.workerId) {
-    activeWorkers = state.workers.filter(w => w.id === attFilters.workerId);
-  }
-
-  let html = `
-    <table class="w-full text-left text-sm min-w-[850px]">
-      <thead>
-        <tr class="text-xs text-zandiTextMuted border-b border-zandiBorder/40">
-          <th class="pb-2">근무일자</th>
-  `;
-
-  activeWorkers.forEach(worker => {
-    html += `<th class="pb-2 text-center">${worker.name}</th>`;
+  // 필터링 적용된 출근 내역 데이터 추출
+  let filteredAttendance = state.attendance.filter(att => {
+    if (attFilters.workerId && att.workerId !== attFilters.workerId) return false;
+    if (attFilters.workType && att.workType !== Number(attFilters.workType)) return false;
+    if (attFilters.startDate && att.workDate < attFilters.startDate) return false;
+    if (attFilters.endDate && att.workDate > attFilters.endDate) return false;
+    return true;
   });
 
-  html += `
-          <th class="pb-2 text-right">일당 합계</th>
+  // 날짜 내림차순 정렬
+  filteredAttendance.sort((a, b) => {
+    const dateDiff = new Date(b.workDate) - new Date(a.workDate);
+    if (dateDiff !== 0) return dateDiff;
+    const workerA = state.workers.find(w => w.id === a.workerId) || { name: '' };
+    const workerB = state.workers.find(w => w.id === b.workerId) || { name: '' };
+    return workerA.name.localeCompare(workerB.name);
+  });
+
+  let html = `
+    <table class="w-full text-left text-sm min-w-[650px]">
+      <thead>
+        <tr class="text-xs text-zandiTextMuted border-b border-zandiBorder/40">
+          <th class="pb-2 pl-3 w-10">
+            <label class="custom-checkbox">
+              <input type="checkbox" id="att-select-all-check" onclick="toggleAllAttSelects(this)">
+              <span class="checkmark"></span>
+            </label>
+          </th>
+          <th class="pb-2">일자</th>
+          <th class="pb-2">인부명</th>
+          <th class="pb-2 text-center">근무형태</th>
+          <th class="pb-2 text-right">기준일당</th>
+          <th class="pb-2 text-right">정산금액</th>
+          <th class="pb-2 text-center">지급여부</th>
+          <th class="pb-2 text-center">삭제</th>
         </tr>
       </thead>
       <tbody>
   `;
 
-  if (dates.length === 0) {
-    html += `<tr><td colspan="${activeWorkers.length + 2}" class="p-4 text-center text-gray-500 text-xs">출근 기록이 없습니다.</td></tr>`;
+  if (filteredAttendance.length === 0) {
+    html += `<tr><td colspan="8" class="p-4 text-center text-gray-500 text-xs">출근 기록이 없습니다.</td></tr>`;
   } else {
-    dates.forEach(date => {
-      let daySum = 0;
-      html += `<tr class="border-b border-gray-800 hover:bg-emerald-950/10">`;
-      html += `<td class="p-3 text-gray-400 font-medium">${date}</td>`;
+    filteredAttendance.forEach(att => {
+      const worker = state.workers.find(w => w.id === att.workerId) || { name: '알수없음', baseDailyWage: 0 };
+      const payment = att.workType * att.dailyWage;
+      
+      const isPaidClass = att.isPaid 
+        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+        : 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
 
-      activeWorkers.forEach(worker => {
-        const att = state.attendance.find(a => a.workDate === date && a.workerId === worker.id);
-        
-        html += `<td class="p-3 text-center">`;
-        if (att) {
-          const payment = att.workType * att.dailyWage;
-          daySum += payment;
-          
-          const isPaidClass = att.isPaid 
-            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
-          
-          html += `
-            <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold ${isPaidClass}">
-              <span class="cursor-pointer" onclick="toggleAttendancePayment('${att.id}')" title="지급 여부 토글">
-                ${att.workType === 1.0 ? '하루(1.0)' : '반(0.5)'} ${att.isPaid ? '지급' : '미급'}
-              </span>
-              <button onclick="deleteAttendance('${att.id}')" class="text-rose-400 hover:text-rose-300 ml-1 flex items-center justify-center" title="삭제">
-                <i data-lucide="x" class="w-3 h-3"></i>
-              </button>
-            </div>
-          `;
-        } else {
-          html += `<span class="text-gray-600 font-medium">-</span>`;
-        }
-        html += `</td>`;
-      });
-
-      html += `<td class="p-3 text-right text-emerald-400 font-bold">${daySum.toLocaleString()}원</td>`;
-      html += `</tr>`;
+      html += `
+        <tr class="border-b border-gray-800 hover:bg-emerald-950/10">
+          <td class="p-3 pl-3">
+            <label class="custom-checkbox">
+              <input type="checkbox" class="att-select-check" value="${att.id}" ${att.isPaid ? 'disabled' : ''}>
+              <span class="checkmark"></span>
+            </label>
+          </td>
+          <td class="p-3 text-gray-400 font-medium">${att.workDate}</td>
+          <td class="p-3 text-white font-medium">${worker.name}</td>
+          <td class="p-3 text-center text-gray-300">
+            ${att.workType === 1.0 ? '하루(1.0)' : '반나절(0.5)'}
+          </td>
+          <td class="p-3 text-right text-gray-300">${att.dailyWage.toLocaleString()}원</td>
+          <td class="p-3 text-right text-emerald-400 font-bold">${payment.toLocaleString()}원</td>
+          <td class="p-3 text-center">
+            <span class="cursor-pointer inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${isPaidClass}" onclick="toggleAttendancePayment('${att.id}')" title="지급 여부 토글">
+              ${att.isPaid ? '지급완료' : '미지급'}
+            </span>
+          </td>
+          <td class="p-3 text-center">
+            <button onclick="deleteAttendance('${att.id}')" class="text-rose-400 hover:text-rose-300 p-1 flex items-center justify-center mx-auto" title="삭제">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+          </td>
+        </tr>
+      `;
     });
   }
 
@@ -819,6 +824,14 @@ function renderAttendanceMatrix() {
   container.innerHTML = html;
   if (window.lucide) window.lucide.createIcons();
 }
+
+window.toggleAllAttSelects = function(master) {
+  const checkboxes = document.querySelectorAll('.att-select-check:not(:disabled)');
+  checkboxes.forEach(cb => {
+    cb.checked = master.checked;
+  });
+};
+
 
 // 4.5. Land Rent View
 function renderRent() {
@@ -1689,22 +1702,21 @@ window.toggleAllCustSelects = function(master) {
 
 
 window.bulkPayAttendance = async function() {
-  // 현재 설정된 필터 조건에 해당하고, 아직 지급되지 않은 출근 내역 추출
-  let targetEntries = state.attendance.filter(att => {
-    if (att.isPaid) return false;
-    if (attFilters.workerId && att.workerId !== attFilters.workerId) return false;
-    if (attFilters.workType && att.workType !== Number(attFilters.workType)) return false;
-    if (attFilters.startDate && att.workDate < attFilters.startDate) return false;
-    if (attFilters.endDate && att.workDate > attFilters.endDate) return false;
-    return true;
-  });
-
-  if (targetEntries.length === 0) {
-    showToast('선택한 조건에 해당하는 미지급 내역이 없습니다.', 'info');
+  const checkedBoxes = document.querySelectorAll('.att-select-check:checked');
+  if (checkedBoxes.length === 0) {
+    showToast('지급 완료 처리할 출근 내역을 먼저 선택해 주세요.', 'info');
     return;
   }
 
-  const confirmMsg = `필터링된 미지급 내역 ${targetEntries.length}건을 일괄 지급 완료 처리하시겠습니까?`;
+  const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+  let targetEntries = state.attendance.filter(att => selectedIds.includes(att.id) && !att.isPaid);
+
+  if (targetEntries.length === 0) {
+    showToast('선택한 내역 중 지급 처리할 수 있는 미지급 내역이 없습니다.', 'info');
+    return;
+  }
+
+  const confirmMsg = `선택한 출근 내역 ${targetEntries.length}건을 일괄 지급 완료 처리하시겠습니까?`;
   if (!confirm(confirmMsg)) return;
 
   // 일괄 업데이트 및 Supabase 동기화
@@ -1720,6 +1732,10 @@ window.bulkPayAttendance = async function() {
   saveState();
   renderAll();
   showToast(`총 ${targetEntries.length}건의 인건비가 일괄 지급 완료 처리되었습니다.`, 'success');
+  
+  // 마스터 체크박스 해제
+  const masterCheck = document.getElementById('att-select-all-check');
+  if (masterCheck) masterCheck.checked = false;
 };
 
 
