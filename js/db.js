@@ -9,13 +9,6 @@ async function initSupabase() {
   const url = localStorage.getItem('zandi_supabase_url');
   let key = localStorage.getItem('zandi_supabase_key');
   const indicator = document.getElementById('sync-indicator');
-
-  // 자동 완성으로 인해 비밀번호가 Supabase Key로 오염 저장된 경우 자동 차단 및 복구
-  if (key && (key === "1234" || key.length < 10)) {
-    console.warn("[initSupabase] 비밀번호 자동 완성으로 오염된 Supabase Key 감지. 초기화합니다.");
-    localStorage.removeItem('zandi_supabase_key');
-    key = null;
-  }
   
   // input fields prefill
   if (url) document.getElementById('settings-supabase-url').value = url;
