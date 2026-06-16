@@ -32,7 +32,7 @@
     }
   </script>
   <!-- CSS Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=2027">
+  <link rel="stylesheet" href="styles.css?v=2028">
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -538,7 +538,12 @@
                 </div>
                 <div>
                   <label class="block text-xs text-slate-400 mb-1">기본 일당 (하루 1.0 기준) *</label>
-                  <input type="number" id="worker-wage" placeholder="예: 150000" required
+                  <input type="text" id="worker-wage" placeholder="예: 150,000" required
+                    class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">반일당 (반나절 0.5 기준) *</label>
+                  <input type="text" id="worker-half-wage" placeholder="예: 80,000" required
                     class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
                 </div>
                 <button type="submit" class="w-full btn-primary justify-center text-sm py-2">
@@ -1188,6 +1193,41 @@
     </div>
   </div>
 
+  <!-- 4.5. 인부 정보 수정 모달 -->
+  <div id="worker-edit-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden">
+    <div class="glass-panel p-6 max-w-md w-full mx-4 border border-zandiBorder">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i data-lucide="edit-3" class="text-emerald-400"></i> 인부 정보 수정
+        </h3>
+        <button id="close-worker-edit-modal-btn" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="edit-worker-form" class="space-y-4">
+        <input type="hidden" id="edit-worker-id">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">인부 이름 *</label>
+          <input type="text" id="edit-worker-name" required
+            class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">기본 일당 (하루 1.0 기준) *</label>
+          <input type="text" id="edit-worker-wage" required
+            class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">반일당 (반나절 0.5 기준) *</label>
+          <input type="text" id="edit-worker-half-wage" required
+            class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+        </div>
+        <button type="submit" class="w-full btn-primary justify-center text-sm py-2">
+          수정 완료 <i data-lucide="check" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- 5. 판매 대장 수정 모달 -->
   <div id="sale-edit-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden">
     <div class="glass-panel p-6 max-w-md w-full mx-4 border border-zandiBorder">
@@ -1375,10 +1415,10 @@
   <!-- Supabase JS Client CDN -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <!-- Application Logic Modules -->
-  <script src="js/state.js?v=2027"></script>
-  <script src="js/utils.js?v=2027"></script>
-  <script src="js/db.js?v=2027"></script>
-  <script src="js/ui.js?v=2027"></script>
-  <script src="js/app.js?v=2027"></script>
+  <script src="js/state.js?v=2028"></script>
+  <script src="js/utils.js?v=2028"></script>
+  <script src="js/db.js?v=2028"></script>
+  <script src="js/ui.js?v=2028"></script>
+  <script src="js/app.js?v=2028"></script>
 </body>
 </html>

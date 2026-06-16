@@ -541,13 +541,20 @@ function renderAttendance() {
     tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
     tr.innerHTML = `
       <td class="p-3 text-white font-medium">${worker.name}</td>
-      <td class="p-3 text-emerald-400 font-bold">${worker.baseDailyWage.toLocaleString()}원</td>
+      <td class="p-3 text-emerald-400 font-bold">
+        ${worker.baseDailyWage.toLocaleString()}원 / ${(worker.halfDailyWage || Math.round(worker.baseDailyWage * 0.5)).toLocaleString()}원
+      </td>
       <td class="p-3 text-gray-300">${totalDays}일</td>
       <td class="p-3 text-rose-400 font-semibold">${unpaidWage.toLocaleString()}원</td>
       <td class="p-3 text-center">
-        <button onclick="deleteWorker('${worker.id}')" class="text-rose-400 hover:text-rose-300 p-1">
-          <i data-lucide="trash-2" class="w-4 h-4"></i>
-        </button>
+        <div class="flex items-center justify-center gap-2">
+          <button onclick="openWorkerEditModal('${worker.id}')" class="text-emerald-400 hover:text-emerald-300 p-1" title="수정">
+            <i data-lucide="edit-3" class="w-4 h-4"></i>
+          </button>
+          <button onclick="deleteWorker('${worker.id}')" class="text-rose-400 hover:text-rose-300 p-1" title="삭제">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
       </td>
     `;
     workerList.appendChild(tr);
@@ -595,8 +602,7 @@ function renderAttendance() {
           if (val === 1.0) {
             wageInput.value = formatAmountInput(String(worker.baseDailyWage));
           } else if (val === 0.5) {
-            // 기본값은 절반으로 제안하지만, 직접 수정 가능하도록 포커스+전체선택
-            wageInput.value = formatAmountInput(String(Math.round(worker.baseDailyWage * 0.5)));
+            wageInput.value = formatAmountInput(String(worker.halfDailyWage || Math.round(worker.baseDailyWage * 0.5)));
             wageInput.focus();
             wageInput.select(); // 전체 선택 → 바로 다른 금액 입력 가능
           }
@@ -1169,9 +1175,14 @@ window.deleteSale = function(id) {
 };
 
 // 5.3. Worker / Labor Actions
-function addWorker(name, baseDailyWage) {
+function addWorker(name, baseDailyWage, halfDailyWage) {
   const id = 'worker-' + Date.now();
-  const newWorker = { id, name, baseDailyWage: Number(baseDailyWage) };
+  const newWorker = { 
+    id, 
+    name, 
+    baseDailyWage: Number(String(baseDailyWage).replace(/,/g, '')) || 0,
+    halfDailyWage: Number(String(halfDailyWage).replace(/,/g, '')) || 0 
+  };
   state.workers.push(newWorker);
   saveState();
   pushWorker(newWorker);
@@ -1391,6 +1402,20 @@ window.openCustomerEditModal = function(id) {
 
   document.getElementById('customer-edit-modal').classList.remove('hidden');
 };
+
+// Worker Edit Modal Actions
+window.openWorkerEditModal = function(id) {
+  const worker = state.workers.find(w => w.id === id);
+  if (!worker) return;
+
+  document.getElementById('edit-worker-id').value = worker.id;
+  document.getElementById('edit-worker-name').value = worker.name;
+  document.getElementById('edit-worker-wage').value = formatAmountInput(String(worker.baseDailyWage || 0));
+  document.getElementById('edit-worker-half-wage').value = formatAmountInput(String(worker.halfDailyWage || Math.round((worker.baseDailyWage || 0) * 0.5)));
+
+  document.getElementById('worker-edit-modal').classList.remove('hidden');
+};
+
 
 // Sale Edit Modal Actions
 window.openSaleEditModal = function(id) {

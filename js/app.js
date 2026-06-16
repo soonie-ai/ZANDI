@@ -379,9 +379,10 @@ function initForms() {
     e.preventDefault();
     const name = document.getElementById('worker-name').value.trim();
     const baseDailyWage = document.getElementById('worker-wage').value;
+    const halfDailyWage = document.getElementById('worker-half-wage').value;
 
     if (!name || !baseDailyWage) return;
-    addWorker(name, baseDailyWage);
+    addWorker(name, baseDailyWage, halfDailyWage);
     document.getElementById('worker-form').reset();
   });
 
@@ -709,6 +710,7 @@ function initForms() {
   attachAmountFormat('cust-price-extra');
   attachAmountFormat('sale-collected-amount');
   attachAmountFormat('worker-wage');
+  attachAmountFormat('worker-half-wage');
   attachAmountFormat('modal-pay-amount');
   attachAmountFormat('debt-pay-amount');
 
@@ -724,6 +726,8 @@ function initForms() {
   attachAmountFormat('edit-cust-price-pyeong');
   attachAmountFormat('edit-cust-price-extra');
   attachAmountFormat('edit-sale-price');
+  attachAmountFormat('edit-worker-wage');
+  attachAmountFormat('edit-worker-half-wage');
 
   const rentSearchInput = document.getElementById('filter-rent-search');
   if (rentSearchInput) {
@@ -871,6 +875,13 @@ function initForms() {
     });
   }
 
+  const closeWorkerEditBtn = document.getElementById('close-worker-edit-modal-btn');
+  if (closeWorkerEditBtn) {
+    closeWorkerEditBtn.addEventListener('click', () => {
+      document.getElementById('worker-edit-modal').classList.add('hidden');
+    });
+  }
+
   const closeSaleEditBtn = document.getElementById('close-sale-edit-modal-btn');
   if (closeSaleEditBtn) {
     closeSaleEditBtn.addEventListener('click', () => {
@@ -911,6 +922,33 @@ function initForms() {
       }
       renderAll();
       document.getElementById('customer-edit-modal').classList.add('hidden');
+    });
+  }
+
+  const editWorkerForm = document.getElementById('edit-worker-form');
+  if (editWorkerForm) {
+    editWorkerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('edit-worker-id').value;
+      const worker = state.workers.find(w => w.id === id);
+      if (!worker) return;
+
+      worker.name = document.getElementById('edit-worker-name').value.trim();
+      worker.baseDailyWage = Number(document.getElementById('edit-worker-wage').value.replace(/,/g, '')) || 0;
+      worker.halfDailyWage = Number(document.getElementById('edit-worker-half-wage').value.replace(/,/g, '')) || 0;
+
+      saveState();
+      try {
+        await pushWorker(worker);
+        if (supabaseClient) {
+          showToast('인부 정보가 수정되었습니다.', 'success');
+        }
+      } catch (err) {
+        console.error('[editWorkerForm] Supabase 저장 실패, 로컬 데이터는 유지됩니다:', err);
+        showToast('서버 저장 실패: 데이터베이스 권한 또는 컬럼 오류 (로컬에 임시 보존됨)', 'warning');
+      }
+      renderAll();
+      document.getElementById('worker-edit-modal').classList.add('hidden');
     });
   }
 

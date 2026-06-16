@@ -208,7 +208,14 @@ async function pullFromSupabase() {
       notes: s.notes,
       payments: s.payments || []
     }));
-    state.workers = work.map(w => ({ id: w.id, name: w.name, baseDailyWage: w.base_daily_wage }));
+    state.workers = work.map(w => ({ 
+      id: w.id, 
+      name: w.name, 
+      baseDailyWage: w.base_daily_wage,
+      halfDailyWage: w.half_daily_wage !== undefined && w.half_daily_wage !== null 
+        ? w.half_daily_wage 
+        : Math.round((w.base_daily_wage || 0) * 0.5)
+    }));
     state.attendance = att.map(a => ({ 
       id: a.id, 
       workerId: a.worker_id, 
@@ -341,11 +348,26 @@ async function removeSaleSupabase(id) {
 async function pushWorker(worker) {
   if (!supabaseClient) return;
   try {
-    await supabaseClient.from('workers').upsert({
+    const { error } = await supabaseClient.from('workers').upsert({
       id: worker.id,
       name: worker.name,
-      base_daily_wage: worker.baseDailyWage
+      base_daily_wage: worker.baseDailyWage,
+      half_daily_wage: worker.halfDailyWage
     });
+    if (error) {
+      // 42703 (undefined_column) 에러 발생 시, half_daily_wage 컬럼 없이 재시도
+      if (error.code === '42703') {
+        console.warn("Supabase 'workers' 테이블에 'half_daily_wage' 컬럼이 없어 컬럼 제외 후 재시도합니다.");
+        const { error: retryError } = await supabaseClient.from('workers').upsert({
+          id: worker.id,
+          name: worker.name,
+          base_daily_wage: worker.baseDailyWage
+        });
+        if (retryError) throw retryError;
+      } else {
+        throw error;
+      }
+    }
   } catch (e) { console.error(e); }
 }
 
