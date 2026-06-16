@@ -385,8 +385,20 @@ async function pushCustomers(customers) {
   try {
     const { error } = await supabaseClient.from('customers').upsert(payload);
     if (error) {
-      console.error('[pushCustomers] Supabase 저장 오류:', error);
-      throw error;
+      // PostgreSQL 오류 코드 42703 (undefined_column) 이거나 에러 메시지에 sort_order가 포함된 경우
+      if (error.code === '42703' || (error.message && error.message.includes('sort_order'))) {
+        console.warn("[pushCustomers] sort_order 컬럼이 존재하지 않아 해당 컬럼을 제외하고 저장 재시도합니다.");
+        const fallbackPayload = payload.map(p => {
+          const { sort_order, ...rest } = p;
+          return rest;
+        });
+        const { error: fallbackError } = await supabaseClient.from('customers').upsert(fallbackPayload);
+        if (fallbackError) {
+          throw fallbackError;
+        }
+      } else {
+        throw error;
+      }
     }
   } catch (e) {
     console.error('[pushCustomers] 예외 발생:', e);
