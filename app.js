@@ -344,7 +344,6 @@ async function pushCustomers(customers) {
     console.error('[pushCustomers] 예외 발생:', e);
   }
 }
-}
 
 async function removeCustomerSupabase(id) {
   if (!supabaseClient) return;
