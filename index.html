@@ -959,13 +959,13 @@
         <form id="settings-form" class="space-y-3 bg-black/25 p-3 rounded-lg border border-zandiBorder/20">
           <div>
             <label class="block text-xs text-slate-400 mb-1">Supabase Project URL</label>
-            <input type="text" id="settings-supabase-url" placeholder="https://your-project.supabase.co"
+            <input type="text" id="settings-supabase-url" placeholder="https://your-project.supabase.co" autocomplete="off"
               class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-xs">
           </div>
           <div>
             <label class="block text-xs text-slate-400 mb-1">Supabase Anon Key</label>
-            <input type="password" id="settings-supabase-key" placeholder="your-anon-key" autocomplete="new-password"
-              class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-xs">
+            <input type="text" id="settings-supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsIn..." autocomplete="off" spellcheck="false"
+              class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-xs font-mono">
           </div>
           <div class="flex items-center space-x-2 pt-1">
             <button type="submit" class="btn-primary text-xs py-2">

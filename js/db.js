@@ -10,20 +10,32 @@ async function initSupabase() {
   let key = localStorage.getItem('zandi_supabase_key');
   const indicator = document.getElementById('sync-indicator');
   
-  // input fields prefill
-  if (url) {
+  // input fields prefill - localStorage 값이 유효할 때만 채움 (브라우저 자동완성 오염 방지)
+  const isValidUrl = url && url.startsWith('https://') && url.includes('supabase');
+  const isValidKey = key && key.length > 20 && !['1234', 'openzandi'].includes(key);
+
+  if (isValidUrl) {
     document.getElementById('settings-supabase-url').value = url;
   } else {
     document.getElementById('settings-supabase-url').value = '';
+    if (!isValidUrl && url) {
+      console.warn('[initSupabase] 저장된 URL이 유효하지 않아 무시합니다:', url);
+      localStorage.removeItem('zandi_supabase_url');
+    }
   }
   
-  if (key) {
+  if (isValidKey) {
     document.getElementById('settings-supabase-key').value = key;
   } else {
     document.getElementById('settings-supabase-key').value = '';
+    if (!isValidKey && key) {
+      console.warn('[initSupabase] 저장된 Key가 유효하지 않아 무시합니다 (자동완성 오염 추정):', key.substring(0, 8) + '...');
+      localStorage.removeItem('zandi_supabase_key');
+      key = null;
+    }
   }
 
-  if (url && key && window.supabase) {
+  if (isValidUrl && isValidKey && window.supabase) {
     try {
       supabaseClient = window.supabase.createClient(url, key);
       
