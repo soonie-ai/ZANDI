@@ -1367,6 +1367,9 @@ function initRentYears() {
   const thNext = document.getElementById('rent-header-year-next');
   if (thPrev) thPrev.textContent = `${yearPrev}년`;
   if (thCurr) thCurr.textContent = `${yearCurr}년`;
+  if (thNext) thNext.textContent = `${yearNext}년`;
+}
+
 // Customer Edit Modal Actions
 window.openCustomerEditModal = function(id) {
   const customer = state.customers.find(c => c.id === id);
