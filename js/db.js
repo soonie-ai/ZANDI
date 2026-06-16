@@ -11,8 +11,17 @@ async function initSupabase() {
   const indicator = document.getElementById('sync-indicator');
   
   // input fields prefill
-  if (url) document.getElementById('settings-supabase-url').value = url;
-  if (key) document.getElementById('settings-supabase-key').value = key || '';
+  if (url) {
+    document.getElementById('settings-supabase-url').value = url;
+  } else {
+    document.getElementById('settings-supabase-url').value = '';
+  }
+  
+  if (key) {
+    document.getElementById('settings-supabase-key').value = key;
+  } else {
+    document.getElementById('settings-supabase-key').value = '';
+  }
 
   if (url && key && window.supabase) {
     try {
