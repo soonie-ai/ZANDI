@@ -5,8 +5,8 @@
 // 이 상수에 본인의 Supabase URL과 Key를 직접 입력하시면 연동이 영구적으로 고정됩니다.
 // (비어있거나 플레이스홀더일 경우 기존 로컬스토리지 저장 정보로 폴백)
 // =========================================================================
-const SUPABASE_URL = "https://your-project.supabase.co";
-const SUPABASE_KEY = "your-anon-key";
+const SUPABASE_URL = "https://xlreatabvuezxatuslgf.supabase.co";
+const SUPABASE_KEY = "sb_publishable_N8T-SPxMLfayG9b0e2SpmA_TKejBJTi";
 
 // Supabase Global Client
 let supabaseClient = null;
