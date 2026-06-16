@@ -1118,7 +1118,7 @@ function renderAttendance() {
             <option value="0.5">반나절 (0.5)</option>
           </select>
           <div class="flex items-center gap-0.5">
-            <input type="number" class="att-worker-wage bg-black/40 border border-zandiBorder text-emerald-400 text-[11px] rounded p-1 w-20 text-right font-bold" value="${worker.baseDailyWage}" placeholder="일당">
+            <input type="text" inputmode="numeric" class="att-worker-wage bg-black/40 border border-zandiBorder text-emerald-400 text-[11px] rounded p-1 w-20 text-right font-bold" value="${formatAmountInput(String(worker.baseDailyWage))}" placeholder="일당">
             <span class="text-[9px] text-slate-500">원</span>
           </div>
           <label class="custom-checkbox flex-shrink-0">
@@ -1130,17 +1130,21 @@ function renderAttendance() {
       `;
       workersChecklistContainer.appendChild(div);
 
-      // 드롭다운 변경 시 입력 칸의 기본값 자동 변경
       const select = div.querySelector('.att-worker-type');
       const wageInput = div.querySelector('.att-worker-wage');
+      
+      // 일당 인풋 금액 포매터 연결
+      attachAmountFormat(wageInput);
+
+      // 드롭다운 변경 시 입력 칸의 기본값 자동 변경
       if (select && wageInput) {
         select.addEventListener('change', () => {
           const val = Number(select.value);
           if (val === 1.0) {
-            wageInput.value = worker.baseDailyWage;
+            wageInput.value = formatAmountInput(String(worker.baseDailyWage));
           } else if (val === 0.5) {
             // 기본값은 절반으로 제안하지만, 직접 수정 가능하도록 포커스+전체선택
-            wageInput.value = Math.round(worker.baseDailyWage * 0.5);
+            wageInput.value = formatAmountInput(String(Math.round(worker.baseDailyWage * 0.5)));
             wageInput.focus();
             wageInput.select(); // 전체 선택 → 바로 다른 금액 입력 가능
           }
@@ -1851,13 +1855,16 @@ function addSaleItemRow() {
   const priceInput = row.querySelector('.item-price');
   const removeBtn = row.querySelector('.remove-item-row-btn');
 
+  // 금액 포매터 장착
+  attachAmountFormat(priceInput);
+
   typeSelect.addEventListener('change', () => {
     const custId = document.getElementById('sale-customer').value;
     const customer = state.customers.find(c => c.id === custId);
     if (customer && customer.prices) {
-      priceInput.value = customer.prices[typeSelect.value] || 0;
+      priceInput.value = formatAmountInput(String(customer.prices[typeSelect.value] || 0));
     } else {
-      priceInput.value = 0;
+      priceInput.value = '0';
     }
     calculateTotals();
   });
@@ -1873,7 +1880,7 @@ function addSaleItemRow() {
   const custId = document.getElementById('sale-customer').value;
   const customer = state.customers.find(c => c.id === custId);
   if (customer && customer.prices) {
-    priceInput.value = customer.prices[typeSelect.value] || 0;
+    priceInput.value = formatAmountInput(String(customer.prices[typeSelect.value] || 0));
   }
   
   calculateTotals();
@@ -1975,16 +1982,16 @@ function initForms() {
     e.preventDefault();
     const name = document.getElementById('cust-name').value.trim();
     const phone = document.getElementById('cust-phone').value.trim();
-    const initialDebt = document.getElementById('cust-initial-debt').value;
+    const initialDebt = Number(document.getElementById('cust-initial-debt').value.replace(/,/g, '')) || 0;
     
     const prices = {
-      '1818': Number(document.getElementById('cust-price-1818').value) || 0,
-      '1818t': Number(document.getElementById('cust-price-1818t').value) || 0,
-      '3030': Number(document.getElementById('cust-price-3030').value) || 0,
-      '3030t': Number(document.getElementById('cust-price-3030t').value) || 0,
-      '4060': Number(document.getElementById('cust-price-4060').value) || 0,
-      'pyeong': Number(document.getElementById('cust-price-pyeong').value) || 0,
-      'extra': Number(document.getElementById('cust-price-extra').value) || 0
+      '1818': Number(document.getElementById('cust-price-1818').value.replace(/,/g, '')) || 0,
+      '1818t': Number(document.getElementById('cust-price-1818t').value.replace(/,/g, '')) || 0,
+      '3030': Number(document.getElementById('cust-price-3030').value.replace(/,/g, '')) || 0,
+      '3030t': Number(document.getElementById('cust-price-3030t').value.replace(/,/g, '')) || 0,
+      '4060': Number(document.getElementById('cust-price-4060').value.replace(/,/g, '')) || 0,
+      'pyeong': Number(document.getElementById('cust-price-pyeong').value.replace(/,/g, '')) || 0,
+      'extra': Number(document.getElementById('cust-price-extra').value.replace(/,/g, '')) || 0
     };
 
     if (!name) return;
@@ -2002,9 +2009,9 @@ function initForms() {
       const typeSelect = row.querySelector('.item-product-type');
       const priceInput = row.querySelector('.item-price');
       if (customer && customer.prices) {
-        priceInput.value = customer.prices[typeSelect.value] || 0;
+        priceInput.value = formatAmountInput(String(customer.prices[typeSelect.value] || 0));
       } else {
-        priceInput.value = 0;
+        priceInput.value = '0';
       }
     });
     calculateTotals();
@@ -2014,7 +2021,7 @@ function initForms() {
   document.getElementById('btn-fill-full-payment').addEventListener('click', () => {
     const totalStr = document.getElementById('sale-items-total').textContent;
     const total = Number(totalStr.replace(/[^0-9]/g, '')) || 0;
-    document.getElementById('sale-collected-amount').value = total;
+    document.getElementById('sale-collected-amount').value = formatAmountInput(String(total));
   });
 
   // 4) 품목 추가 버튼 바인딩
@@ -2034,13 +2041,13 @@ function initForms() {
     }
 
     // 폼에 입력받은 총 수금액 (받은 돈)
-    let remainingCollected = Number(document.getElementById('sale-collected-amount').value) || 0;
+    let remainingCollected = Number(document.getElementById('sale-collected-amount').value.replace(/,/g, '')) || 0;
 
     // 각 품목별로 루프 돌려 등록
     for (const row of rows) {
       const productType = row.querySelector('.item-product-type').value;
       const quantity = Number(row.querySelector('.item-qty').value);
-      const price = Number(row.querySelector('.item-price').value);
+      const price = Number(row.querySelector('.item-price').value.replace(/,/g, '')) || 0;
 
       if (!customerId || !saleDate || !quantity) continue;
 
@@ -2118,7 +2125,7 @@ function initForms() {
         const isPaid = paidInput ? paidInput.checked : false;
 
         const wageInput = row.querySelector('.att-worker-wage');
-        const enteredWage = wageInput ? Number(wageInput.value) : worker.baseDailyWage;
+        const enteredWage = wageInput ? Number(wageInput.value.replace(/,/g, '')) : worker.baseDailyWage;
         // dailyWage = 입력된 금액 / 근무일수(workType)
         const dailyWage = workType > 0 ? (enteredWage / workType) : enteredWage;
 
@@ -2316,7 +2323,7 @@ function initForms() {
     if (!sale) return;
 
     const date = document.getElementById('modal-pay-date').value;
-    const amount = Number(document.getElementById('modal-pay-amount').value);
+    const amount = Number(document.getElementById('modal-pay-amount').value.replace(/,/g, ''));
 
     if (!date || amount <= 0) return;
 
@@ -2345,7 +2352,7 @@ function initForms() {
       e.preventDefault();
       const customerId = document.getElementById('debt-modal-cust-id').value;
       const date = document.getElementById('debt-pay-date').value;
-      const amount = Number(document.getElementById('debt-pay-amount').value);
+      const amount = Number(document.getElementById('debt-pay-amount').value.replace(/,/g, ''));
       
       if (!customerId || !date || amount <= 0) return;
       
@@ -2436,24 +2443,71 @@ function initForms() {
     });
   }
 
-  // 금액 필드에 콤마 포맷 이벤트 연결
-  function attachAmountFormat(inputId) {
-    const el = document.getElementById(inputId);
+  // 금액 필드에 콤마 포맷 및 포커스 시 선택/지우기 이벤트 연결
+  function attachAmountFormat(inputIdOrElement) {
+    const el = typeof inputIdOrElement === 'string' ? document.getElementById(inputIdOrElement) : inputIdOrElement;
     if (!el) return;
+    
+    el.type = 'text';
+    el.inputMode = 'numeric';
+
+    el.addEventListener('focus', (e) => {
+      const rawVal = e.target.value.replace(/[^0-9]/g, '');
+      if (rawVal === '0' || rawVal === '') {
+        e.target.value = '';
+      } else {
+        e.target.select();
+      }
+    });
+
+    el.addEventListener('blur', (e) => {
+      const rawVal = e.target.value.replace(/[^0-9]/g, '');
+      if (rawVal === '') {
+        e.target.value = '0';
+      }
+    });
+
     el.addEventListener('input', (e) => {
       const formatted = formatAmountInput(e.target.value);
-      const cursorPos = e.target.selectionStart;
+      const originalSelectionStart = e.target.selectionStart;
+      const originalLength = e.target.value.length;
+      
       e.target.value = formatted;
+      
+      const newLength = formatted.length;
+      const diff = newLength - originalLength;
+      e.target.setSelectionRange(originalSelectionStart + diff, originalSelectionStart + diff);
     });
   }
 
   // 등록 폼
   attachPhoneFormat('rent-phone');
   attachAmountFormat('rent-amount');
+  attachAmountFormat('cust-initial-debt');
+  attachAmountFormat('cust-price-1818');
+  attachAmountFormat('cust-price-1818t');
+  attachAmountFormat('cust-price-3030');
+  attachAmountFormat('cust-price-3030t');
+  attachAmountFormat('cust-price-4060');
+  attachAmountFormat('cust-price-pyeong');
+  attachAmountFormat('cust-price-extra');
+  attachAmountFormat('sale-collected-amount');
+  attachAmountFormat('worker-wage');
+  attachAmountFormat('modal-pay-amount');
+  attachAmountFormat('debt-pay-amount');
 
   // 수정 폼 (수정 모달이 열릴 때 자동으로 이벤트가 걸려있도록)
   attachPhoneFormat('edit-rent-phone');
   attachAmountFormat('edit-rent-amount');
+  attachAmountFormat('edit-cust-initial-debt');
+  attachAmountFormat('edit-cust-price-1818');
+  attachAmountFormat('edit-cust-price-1818t');
+  attachAmountFormat('edit-cust-price-3030');
+  attachAmountFormat('edit-cust-price-3030t');
+  attachAmountFormat('edit-cust-price-4060');
+  attachAmountFormat('edit-cust-price-pyeong');
+  attachAmountFormat('edit-cust-price-extra');
+  attachAmountFormat('edit-sale-price');
 
   const rentSearchInput = document.getElementById('filter-rent-search');
   if (rentSearchInput) {
@@ -2643,15 +2697,15 @@ function initForms() {
 
       customer.name = document.getElementById('edit-cust-name').value.trim();
       customer.phone = document.getElementById('edit-cust-phone').value.trim();
-      customer.initialDebt = Number(document.getElementById('edit-cust-initial-debt').value) || 0;
+      customer.initialDebt = Number(document.getElementById('edit-cust-initial-debt').value.replace(/,/g, '')) || 0;
       customer.prices = {
-        '1818': Number(document.getElementById('edit-cust-price-1818').value) || 0,
-        '1818t': Number(document.getElementById('edit-cust-price-1818t').value) || 0,
-        '3030': Number(document.getElementById('edit-cust-price-3030').value) || 0,
-        '3030t': Number(document.getElementById('edit-cust-price-3030t').value) || 0,
-        '4060': Number(document.getElementById('edit-cust-price-4060').value) || 0,
-        'pyeong': Number(document.getElementById('edit-cust-price-pyeong').value) || 0,
-        'extra': Number(document.getElementById('edit-cust-price-extra').value) || 0
+        '1818': Number(document.getElementById('edit-cust-price-1818').value.replace(/,/g, '')) || 0,
+        '1818t': Number(document.getElementById('edit-cust-price-1818t').value.replace(/,/g, '')) || 0,
+        '3030': Number(document.getElementById('edit-cust-price-3030').value.replace(/,/g, '')) || 0,
+        '3030t': Number(document.getElementById('edit-cust-price-3030t').value.replace(/,/g, '')) || 0,
+        '4060': Number(document.getElementById('edit-cust-price-4060').value.replace(/,/g, '')) || 0,
+        'pyeong': Number(document.getElementById('edit-cust-price-pyeong').value.replace(/,/g, '')) || 0,
+        'extra': Number(document.getElementById('edit-cust-price-extra').value.replace(/,/g, '')) || 0
       };
 
       saveState();
@@ -2673,7 +2727,7 @@ function initForms() {
       sale.saleDate = document.getElementById('edit-sale-date').value;
       sale.productType = document.getElementById('edit-sale-type').value;
       sale.quantity = Number(document.getElementById('edit-sale-qty').value);
-      sale.price = Number(document.getElementById('edit-sale-price').value);
+      sale.price = Number(document.getElementById('edit-sale-price').value.replace(/,/g, '')) || 0;
       sale.notes = document.getElementById('edit-sale-notes').value.trim();
 
       // 재계산 및 정산 상태 재확인
@@ -2800,16 +2854,16 @@ window.openCustomerEditModal = function(id) {
   document.getElementById('edit-cust-id').value = customer.id;
   document.getElementById('edit-cust-name').value = customer.name;
   document.getElementById('edit-cust-phone').value = customer.phone || '';
-  document.getElementById('edit-cust-initial-debt').value = customer.initialDebt || 0;
+  document.getElementById('edit-cust-initial-debt').value = formatAmountInput(String(customer.initialDebt || 0));
 
   const prices = customer.prices || {};
-  document.getElementById('edit-cust-price-1818').value = prices['1818'] || 0;
-  document.getElementById('edit-cust-price-1818t').value = prices['1818t'] || 0;
-  document.getElementById('edit-cust-price-3030').value = prices['3030'] || 0;
-  document.getElementById('edit-cust-price-3030t').value = prices['3030t'] || 0;
-  document.getElementById('edit-cust-price-4060').value = prices['4060'] || 0;
-  document.getElementById('edit-cust-price-pyeong').value = prices['pyeong'] || 0;
-  document.getElementById('edit-cust-price-extra').value = prices['extra'] || 0;
+  document.getElementById('edit-cust-price-1818').value = formatAmountInput(String(prices['1818'] || 0));
+  document.getElementById('edit-cust-price-1818t').value = formatAmountInput(String(prices['1818t'] || 0));
+  document.getElementById('edit-cust-price-3030').value = formatAmountInput(String(prices['3030'] || 0));
+  document.getElementById('edit-cust-price-3030t').value = formatAmountInput(String(prices['3030t'] || 0));
+  document.getElementById('edit-cust-price-4060').value = formatAmountInput(String(prices['4060'] || 0));
+  document.getElementById('edit-cust-price-pyeong').value = formatAmountInput(String(prices['pyeong'] || 0));
+  document.getElementById('edit-cust-price-extra').value = formatAmountInput(String(prices['extra'] || 0));
 
   document.getElementById('customer-edit-modal').classList.remove('hidden');
 };
@@ -2834,7 +2888,7 @@ window.openSaleEditModal = function(id) {
   document.getElementById('edit-sale-date').value = sale.saleDate;
   document.getElementById('edit-sale-type').value = sale.productType;
   document.getElementById('edit-sale-qty').value = sale.quantity;
-  document.getElementById('edit-sale-price').value = sale.price;
+  document.getElementById('edit-sale-price').value = formatAmountInput(String(sale.price || 0));
   document.getElementById('edit-sale-notes').value = sale.notes || '';
 
   document.getElementById('sale-edit-modal').classList.remove('hidden');
