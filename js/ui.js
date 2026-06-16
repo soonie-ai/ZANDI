@@ -408,7 +408,7 @@ function renderSales() {
         </label>
       </td>
       <td class="p-3 text-gray-400">${sale.saleDate}</td>
-      <td class="p-3 text-white font-medium">${customer.name}</td>
+      <td class="p-3 text-white font-medium whitespace-nowrap">${customer.name}</td>
       <td class="p-3 text-gray-300 font-semibold">${PRODUCT_TYPE_LABELS[sale.productType] || '평당'}</td>
       <td class="p-3 text-right text-gray-300">${sale.quantity.toLocaleString()} ${unitLabel}</td>
       <td class="p-3 text-right text-gray-400">${sale.price.toLocaleString()}원</td>
