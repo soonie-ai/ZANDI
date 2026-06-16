@@ -1660,77 +1660,8 @@ window.toggleAllCustSelects = function(master) {
   });
 };
 
-window.bulkMoveCustomersToTop = function() {
-  const checkedBoxes = document.querySelectorAll('.cust-select-check:checked');
-  if (checkedBoxes.length === 0) {
-    showToast('이동할 거래처를 먼저 선택해 주세요.', 'info');
-    return;
-  }
 
-  const selectedIds = new Set(Array.from(checkedBoxes).map(cb => cb.value));
-  const sorted = [...state.customers].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-  
-  const selectedOnes = sorted.filter(c => selectedIds.has(c.id));
-  const remainingOnes = sorted.filter(c => !selectedIds.has(c.id));
-  
-  const newOrder = [...selectedOnes, ...remainingOnes];
-  
-  newOrder.forEach((c, i) => {
-    c.sortOrder = i + 1;
-    const realCustomer = state.customers.find(item => item.id === c.id);
-    if (realCustomer) {
-      realCustomer.sortOrder = i + 1;
-    }
-  });
 
-  saveState();
-  renderCustomers();
-  
-  const masterCheck = document.getElementById('cust-select-all-check');
-  if (masterCheck) masterCheck.checked = false;
-  
-  showToast('선택한 거래처를 맨 위로 올렸습니다. [거래처 순서 저장]을 누르셔야 서버에 최종 영구 반영됩니다.', 'info');
-};
-
-window.saveCustomerOrdering = async function() {
-  if (!supabaseClient) {
-    showToast('로컬 모드: 순서가 로컬에 임시 보존되었습니다.', 'success');
-    return;
-  }
-
-  const saveBtn = document.querySelector('button[onclick="saveCustomerOrdering()"]');
-  const originalHtml = saveBtn ? saveBtn.innerHTML : '';
-  if (saveBtn) {
-    saveBtn.disabled = true;
-    saveBtn.innerHTML = '저장 중... <i class="w-3 h-3 animate-spin inline-block ml-1"></i>';
-  }
-
-  try {
-    // 1) customers 테이블의 sort_order 컬럼 업데이트 시도 (컬럼이 없을 수 있으므로 예외 분리)
-    try {
-      await pushCustomers(state.customers);
-    } catch (err) {
-      console.warn("[saveCustomerOrdering] customers 테이블 sort_order 저장 실패 (컬럼이 없을 수 있음):", err);
-    }
-
-    // 2) settings 테이블에 customer_sort_order 키로 순서 리스트 저장
-    const sortedIds = state.customers.map(c => c.id).join(',');
-    await pushSetting('customer_sort_order', sortedIds);
-    localStorage.setItem('customer_sort_order', sortedIds);
-
-    saveState();
-    showToast('거래처 정렬 순서가 서버에 안전하게 영구 저장되었습니다.', 'success');
-  } catch (err) {
-    console.error("[saveCustomerOrdering] Supabase sync failed:", err);
-    showToast('서버 저장 실패: 네트워크 연결 상태를 확인해 주세요.', 'error');
-  } finally {
-    if (saveBtn) {
-      saveBtn.disabled = false;
-      saveBtn.innerHTML = originalHtml;
-    }
-    renderAll();
-  }
-};
 
 window.bulkPayAttendance = async function() {
   // 현재 설정된 필터 조건에 해당하고, 아직 지급되지 않은 출근 내역 추출
