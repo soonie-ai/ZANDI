@@ -2,5 +2,16 @@
   "buildCommand": null,
   "outputDirectory": ".",
   "installCommand": "echo 'no install needed'",
-  "framework": null
+  "framework": null,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+        }
+      ]
+    }
+  ]
 }
