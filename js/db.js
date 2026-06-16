@@ -10,30 +10,29 @@ async function initSupabase() {
   let key = localStorage.getItem('zandi_supabase_key');
   const indicator = document.getElementById('sync-indicator');
   
-  // input fields prefill - localStorage 값이 유효할 때만 채움 (브라우저 자동완성 오염 방지)
-  const isValidUrl = url && url.startsWith('https://') && url.includes('supabase');
-  const isValidKey = key && key.length > 20 && !['1234', 'openzandi'].includes(key);
+  // input fields prefill - localStorage 값으로 채우기 (절대 자동 삭제하지 않음)
+  // 단, 브라우저 자동완성으로 '1234' 같은 비밀번호가 들어온 경우만 무시
+  const isAutocompletePolluted = (val) => !val || val === '1234' || val === 'openzandi' || val.length < 15;
 
-  if (isValidUrl) {
+  if (url && !isAutocompletePolluted(url)) {
     document.getElementById('settings-supabase-url').value = url;
   } else {
     document.getElementById('settings-supabase-url').value = '';
-    if (!isValidUrl && url) {
-      console.warn('[initSupabase] 저장된 URL이 유효하지 않아 무시합니다:', url);
-      localStorage.removeItem('zandi_supabase_url');
-    }
   }
   
-  if (isValidKey) {
+  if (key && !isAutocompletePolluted(key)) {
     document.getElementById('settings-supabase-key').value = key;
   } else {
     document.getElementById('settings-supabase-key').value = '';
-    if (!isValidKey && key) {
-      console.warn('[initSupabase] 저장된 Key가 유효하지 않아 무시합니다 (자동완성 오염 추정):', key.substring(0, 8) + '...');
-      localStorage.removeItem('zandi_supabase_key');
-      key = null;
+    if (key && isAutocompletePolluted(key)) {
+      console.warn('[initSupabase] Key가 비밀번호처럼 보여 input에 표시하지 않음 (localStorage는 유지):', key.substring(0, 4) + '...');
+      key = null; // 연결 시도만 막고, localStorage는 건드리지 않음
     }
   }
+
+  const isValidUrl = url && !isAutocompletePolluted(url);
+  const isValidKey = key && !isAutocompletePolluted(key);
+
 
   if (isValidUrl && isValidKey && window.supabase) {
     try {
