@@ -1232,7 +1232,6 @@ async function addExpense(usage, amount, notes, date) {
 
 window.deleteExpense = async function(id) {
   if (confirm('이 지출 내역을 삭제하시겠습니까?')) {
-    const originalExpenses = [...state.expenses];
     state.expenses = state.expenses.filter(e => e.id !== id);
     saveState();
     renderAll();
@@ -1241,10 +1240,8 @@ window.deleteExpense = async function(id) {
       await removeExpenseSupabase(id);
       showToast('지출 내역이 성공적으로 삭제되었습니다.');
     } catch (e) {
-      showToast('서버 저장 실패: 삭제 처리를 롤백합니다.');
-      state.expenses = originalExpenses;
-      saveState();
-      renderAll();
+      console.warn('[deleteExpense] Supabase 지출 삭제 실패, 로컬 데이터만 삭제됩니다:', e);
+      showToast('서버 저장 실패 (로컬 데이터만 삭제됨)', 'info');
     }
   }
 };
