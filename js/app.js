@@ -1005,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.removeItem('zandi_supabase_key');
     localStorage.removeItem('zandi_authenticated');
     localStorage.setItem('zandi_password', '1234');
-    window.location.href = window.location.origin + window.location.pathname;
+    window.location.replace(window.location.origin + window.location.pathname);
     return;
   }
 
