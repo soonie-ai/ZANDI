@@ -400,6 +400,13 @@ function renderSales() {
     const tr = document.createElement('tr');
     tr.id = `sale-row-${sale.id}`;
     tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
+    const hasNotes = sale.notes && sale.notes.trim() !== '';
+    const noteButton = hasNotes 
+      ? `<button onclick="alert('메모 내용:\\n\\n${sale.notes.replace(/'/g, "\\'").replace(/"/g, '\\"')}')" class="text-amber-400 hover:text-amber-300 p-1 flex items-center justify-center mx-auto" title="메모 보기">
+           <i data-lucide="message-square" class="w-4.5 h-4.5"></i>
+         </button>`
+      : `<span class="text-slate-600 flex items-center justify-center">-</span>`;
+
     tr.innerHTML = `
       <td class="p-3 text-center pl-2">
         <label class="custom-checkbox inline-block">
@@ -430,7 +437,7 @@ function renderSales() {
           ${uncollected > 0 ? `<span class="text-[9px] text-rose-400 block">미납: ${uncollected.toLocaleString()}원</span>` : ''}
         </div>
       </td>
-      <td class="p-3 text-gray-400">${sale.notes || '-'}</td>
+      <td class="p-3 text-center">${noteButton}</td>
       <td class="p-3 text-center">
         <div class="flex items-center justify-center gap-2">
           <button onclick="openSaleEditModal('${sale.id}')" class="text-emerald-400 hover:text-emerald-300 p-1" title="수정">
