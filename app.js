@@ -775,6 +775,12 @@ function renderCustomers() {
     tr.setAttribute('draggable', 'true');
     tr.dataset.id = customer.id;
     tr.innerHTML = `
+      <td class="p-3 text-center no-print" onclick="event.stopPropagation()">
+        <label class="custom-checkbox inline-block">
+          <input type="checkbox" class="cust-select-check" value="${customer.id}">
+          <span class="checkmark"></span>
+        </label>
+      </td>
       <td class="p-3 text-white font-medium">${customer.name}</td>
       <td class="p-3 text-gray-400">${customer.phone || '-'}</td>
       <td class="p-3 text-xs">
@@ -803,13 +809,6 @@ function renderCustomers() {
       </td>
       <td class="p-3 text-center">
         <div class="flex items-center justify-center gap-1">
-          <button onclick="moveCustomerUp('${customer.id}')" class="text-slate-400 hover:text-white p-0.5" title="위로 이동">
-            <i data-lucide="chevron-up" class="w-4 h-4"></i>
-          </button>
-          <button onclick="moveCustomerDown('${customer.id}')" class="text-slate-400 hover:text-white p-0.5" title="아래로 이동">
-            <i data-lucide="chevron-down" class="w-4 h-4"></i>
-          </button>
-          <span class="text-gray-700 mx-0.5">|</span>
           <button onclick="openCustomerEditModal('${customer.id}')" class="text-emerald-400 hover:text-emerald-300 p-1" title="수정">
             <i data-lucide="edit-2" class="w-4 h-4"></i>
           </button>
@@ -3116,48 +3115,6 @@ window.goSalesTabWithFilter = function(customerId, yearMonth) {
   document.getElementById('customer-monthly-debt-modal').classList.add('hidden');
 };
 
-window.moveCustomerUp = async function(id) {
-  const sorted = [...state.customers].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-  const idx = sorted.findIndex(c => c.id === id);
-  if (idx <= 0) return;
-  
-  const target = sorted[idx];
-  const prev = sorted[idx - 1];
-  
-  sorted.forEach((c, i) => {
-    c.sortOrder = i + 1;
-  });
-  
-  const temp = target.sortOrder;
-  target.sortOrder = prev.sortOrder;
-  prev.sortOrder = temp;
-  
-  saveState();
-  await pushCustomers([target, prev]);
-  renderAll();
-};
-
-window.moveCustomerDown = async function(id) {
-  const sorted = [...state.customers].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-  const idx = sorted.findIndex(c => c.id === id);
-  if (idx < 0 || idx >= sorted.length - 1) return;
-  
-  const target = sorted[idx];
-  const next = sorted[idx + 1];
-  
-  sorted.forEach((c, i) => {
-    c.sortOrder = i + 1;
-  });
-  
-  const temp = target.sortOrder;
-  target.sortOrder = next.sortOrder;
-  next.sortOrder = temp;
-  
-  saveState();
-  await pushCustomers([target, next]);
-  renderAll();
-};
-
 window.reorderCustomers = async function(draggedId, targetId) {
   const sorted = [...state.customers].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   const draggedIndex = sorted.findIndex(c => c.id === draggedId);
@@ -3177,16 +3134,76 @@ window.reorderCustomers = async function(draggedId, targetId) {
   });
   
   saveState();
-  
-  if (supabaseClient) {
-    try {
-      await pushCustomers(state.customers);
-    } catch (err) {
-      console.error("[reorderCustomers] Supabase sync failed:", err);
-    }
+  renderCustomers(); // 화면에 즉시 임시 반영 (저장 버튼 클릭 시 서버 동기화)
+};
+
+window.toggleAllCustSelects = function(master) {
+  const checkboxes = document.querySelectorAll('.cust-select-check');
+  checkboxes.forEach(cb => {
+    cb.checked = master.checked;
+  });
+};
+
+window.bulkMoveCustomersToTop = function() {
+  const checkedBoxes = document.querySelectorAll('.cust-select-check:checked');
+  if (checkedBoxes.length === 0) {
+    showToast('이동할 거래처를 먼저 선택해 주세요.', 'info');
+    return;
   }
+
+  const selectedIds = new Set(Array.from(checkedBoxes).map(cb => cb.value));
+  const sorted = [...state.customers].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   
-  renderAll();
+  const selectedOnes = sorted.filter(c => selectedIds.has(c.id));
+  const remainingOnes = sorted.filter(c => !selectedIds.has(c.id));
+  
+  const newOrder = [...selectedOnes, ...remainingOnes];
+  
+  newOrder.forEach((c, i) => {
+    c.sortOrder = i + 1;
+    const realCustomer = state.customers.find(item => item.id === c.id);
+    if (realCustomer) {
+      realCustomer.sortOrder = i + 1;
+    }
+  });
+
+  saveState();
+  renderCustomers();
+  
+  const masterCheck = document.getElementById('cust-select-all-check');
+  if (masterCheck) masterCheck.checked = false;
+  
+  showToast('선택한 거래처를 맨 위로 올렸습니다. [거래처 순서 저장]을 누르셔야 서버에 최종 영구 반영됩니다.', 'info');
+};
+
+window.saveCustomerOrdering = async function() {
+  if (!supabaseClient) {
+    showToast('로컬 모드: 순서가 로컬에 임시 보존되었습니다.', 'success');
+    return;
+  }
+
+  const saveBtn = document.querySelector('button[onclick="saveCustomerOrdering()"]');
+  const originalHtml = saveBtn ? saveBtn.innerHTML : '';
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '저장 중... <i class="w-3 h-3 animate-spin inline-block ml-1"></i>';
+  }
+
+  try {
+    // 최종 상태 전체를 서버에 단 한번만 일괄 전송 (경쟁 상태 완벽 해결)
+    await pushCustomers(state.customers);
+    saveState();
+    showToast('거래처 정렬 순서가 서버에 안전하게 영구 저장되었습니다.', 'success');
+  } catch (err) {
+    console.error("[saveCustomerOrdering] Supabase sync failed:", err);
+    showToast('서버 저장 실패: 네트워크 연결 상태를 확인해 주세요.', 'error');
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = originalHtml;
+    }
+    renderAll();
+  }
 };
 
 window.bulkPayAttendance = async function() {
