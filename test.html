@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZANDI - 자동화 테스트 러너</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            zandiBg: '#080f0c',
+            zandiSurface: 'rgba(18, 30, 24, 0.8)',
+            zandiBorder: 'rgba(46, 204, 113, 0.2)',
+            zandiPrimary: '#2ecc71'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #080f0c;
+    }
+    .test-card {
+      background: rgba(18, 30, 24, 0.65);
+      border: 1px solid rgba(46, 204, 113, 0.15);
+      backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100 p-6">
+  <div class="max-w-4xl mx-auto space-y-6">
+    <header class="flex items-center justify-between pb-4 border-b border-zandiBorder">
+      <div>
+        <h1 class="text-2xl font-bold text-white tracking-wide">ZANDI 자동화 테스트 러너</h1>
+        <p class="text-xs text-slate-400 mt-1">시스템 주요 기능의 실시간 자가 진단 및 품질 검증</p>
+      </div>
+      <button onclick="runTests()" class="bg-emerald-500 hover:bg-emerald-600 text-black font-bold text-xs px-4 py-2 rounded-lg transition-all">
+        테스트 재실행
+      </button>
+    </header>
+
+    <!-- 요약 보드 -->
+    <div class="grid grid-cols-3 gap-4">
+      <div class="test-card p-4 rounded-xl text-center">
+        <span class="text-xs text-slate-400">총 테스트 케이스</span>
+        <p id="total-count" class="text-2xl font-bold text-white mt-1">0</p>
+      </div>
+      <div class="test-card p-4 rounded-xl text-center border-emerald-500/20">
+        <span class="text-xs text-emerald-400">성공 (Passed)</span>
+        <p id="pass-count" class="text-2xl font-bold text-emerald-400 mt-1">0</p>
+      </div>
+      <div class="test-card p-4 rounded-xl text-center border-rose-500/20">
+        <span class="text-xs text-rose-400">실패 (Failed)</span>
+        <p id="fail-count" class="text-2xl font-bold text-rose-400 mt-1">0</p>
+      </div>
+    </div>
+
+    <!-- 테스트 목록 -->
+    <div class="test-card p-6 rounded-2xl space-y-4">
+      <h2 class="text-sm font-semibold text-slate-300">상세 테스트 결과</h2>
+      <div id="test-results" class="space-y-3">
+        <!-- JS가 동적으로 채워넣음 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 테스트할 애플리케이션 모듈들 사전 로드 -->
+  <script src="js/state.js"></script>
+  <script src="js/utils.js"></script>
+  <!-- Mock Supabase for Testing -->
+  <script>
+    // 테스트 환경에서 Supabase 호출 시 에러가 나지 않도록 가상의 목킹 클라이언트 생성
+    window.supabase = {
+      createClient: function() {
+        return {
+          from: function(table) {
+            return {
+              select: function() { return { limit: function() { return Promise.resolve({ data: [], error: null }); } }; },
+              upsert: function() { return Promise.resolve({ error: null }); },
+              delete: function() { return { eq: function() { return Promise.resolve({ error: null }); } }; }
+            };
+          }
+        };
+      }
+    };
+  </script>
+  <script src="js/db.js"></script>
+  <script src="js/tests.js"></script>
+</body>
+</html>
