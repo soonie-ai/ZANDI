@@ -1010,8 +1010,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // 판매 품목 기본 첫줄 추가
   addSaleItemRow();
 
-  // Supabase 동기화 초기화
-  initSupabase();
+  // Supabase 동기화 초기화 (비동기 처리하여 메인 로그인 화면 렌더링 및 클릭 차단 방지)
+  setTimeout(() => {
+    try {
+      initSupabase();
+    } catch (err) {
+      console.error("[Launch] initSupabase failed: ", err);
+    }
+  }, 100);
 
   renderAll();
 });
