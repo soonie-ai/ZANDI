@@ -402,8 +402,8 @@ function renderSales() {
     tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
     const hasNotes = sale.notes && sale.notes.trim() !== '';
     const noteButton = hasNotes 
-      ? `<button onclick="alert('메모 내용:\\n\\n${sale.notes.replace(/'/g, "\\'").replace(/"/g, '\\"')}')" class="text-amber-400 hover:text-amber-300 p-1 flex items-center justify-center mx-auto" title="메모 보기">
-           <i data-lucide="message-square" class="w-4.5 h-4.5"></i>
+      ? `<button onclick="openSaleNoteModal('${sale.notes.replace(/'/g, "\\'").replace(/"/g, '\\"')}')" class="text-amber-400 hover:text-amber-300 p-1 flex items-center justify-center mx-auto" title="메모 보기">
+           <i data-lucide="message-square" class="w-5 h-5"></i>
          </button>`
       : `<span class="text-slate-600 flex items-center justify-center">-</span>`;
 
@@ -421,20 +421,20 @@ function renderSales() {
       <td class="p-3 text-right text-gray-400">${sale.price.toLocaleString()}원</td>
       <td class="p-3 text-right text-emerald-400 font-bold">${total.toLocaleString()}원</td>
       <td class="p-3 text-center">
-        <div onclick="openPaymentModal('${sale.id}')" class="cursor-pointer group flex flex-col items-center justify-center p-1 rounded hover:bg-emerald-950/45 border border-transparent hover:border-zandiBorder transition-all duration-300">
-          <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+        <div onclick="openPaymentModal('${sale.id}')" class="cursor-pointer group flex flex-col items-center justify-center p-1.5 rounded hover:bg-emerald-950/45 border border-transparent hover:border-zandiBorder transition-all duration-300">
+          <span class="px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide ${
             isFullyPaid 
-              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' 
               : collected > 0 
-                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
+                : 'bg-rose-500/20 text-rose-300 border border-rose-500/40 font-extrabold animate-pulse'
           }">
             ${isFullyPaid ? '수금완료' : collected > 0 ? '부분수금' : '미수금'}
           </span>
-          <span class="text-[9px] text-gray-400 mt-1 block">
-            수금: ${collected.toLocaleString()}원
-          </span>
-          ${uncollected > 0 ? `<span class="text-[9px] text-rose-400 block">미납: ${uncollected.toLocaleString()}원</span>` : ''}
+          ${isFullyPaid 
+            ? `<span class="text-xs text-white font-bold mt-1.5">${collected.toLocaleString()}원</span>` 
+            : `<span class="text-xs text-rose-400 font-extrabold mt-1.5">${uncollected.toLocaleString()}원 미납</span>`
+          }
         </div>
       </td>
       <td class="p-3 text-center">${noteButton}</td>
@@ -1386,6 +1386,20 @@ window.openMonthlyLaborModal = function() {
 
 window.closeMonthlyLaborModal = function() {
   const modal = document.getElementById('monthly-labor-modal');
+  if (modal) modal.classList.add('hidden');
+};
+
+window.openSaleNoteModal = function(notes) {
+  const modal = document.getElementById('sale-note-modal');
+  const content = document.getElementById('sale-note-modal-content');
+  if (modal && content) {
+    content.textContent = notes;
+    modal.classList.remove('hidden');
+  }
+};
+
+window.closeSaleNoteModal = function() {
+  const modal = document.getElementById('sale-note-modal');
   if (modal) modal.classList.add('hidden');
 };
 
