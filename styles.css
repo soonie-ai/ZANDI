@@ -751,16 +751,6 @@ input, select, textarea {
   }
 }
 
-/* Drag & Drop Styles for Customers Reordering */
-.customer-row-draggable {
-  cursor: grab;
-  user-select: none;
-}
-.customer-row-draggable:active {
-  cursor: grabbing;
-}
-.customer-row-draggable.bg-emerald-950\/40 {
-  background-color: rgba(6, 78, 59, 0.4) !important;
-  border-top: 2px solid var(--primary) !important;
-}
+
+
 
