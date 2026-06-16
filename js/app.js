@@ -995,6 +995,18 @@ function initForms() {
 
 // 6. Application Launch Entry Point
 document.addEventListener('DOMContentLoaded', () => {
+  // 강제 초기화 및 비밀번호 복구 주소(?clear=true) 처리
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('clear') === 'true') {
+    console.log("[Launch] 강제 초기화 실행...");
+    localStorage.removeItem('zandi_supabase_url');
+    localStorage.removeItem('zandi_supabase_key');
+    localStorage.removeItem('zandi_authenticated');
+    localStorage.setItem('zandi_password', '1234');
+    window.location.href = window.location.origin + window.location.pathname;
+    return;
+  }
+
   loadState();
   initAuth();
   initNavigation();
