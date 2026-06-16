@@ -10,8 +10,12 @@ async function initSupabase() {
   const key = localStorage.getItem('zandi_supabase_key');
   const indicator = document.getElementById('sync-indicator');
 
+  // 키가 존재하면 UI가 로컬 모드로 풀려 보이지 않도록 즉각 '연동중' 상태 표시
+  if (url && key && indicator) {
+    indicator.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block mr-1"></span> 부부 실시간 연동중';
+  }
+
   // localStorage에 저장된 값을 검증 없이 그대로 input에 복원
-  // (autocomplete 방지는 HTML에서 type="text", autocomplete="off"로 처리)
   const urlInput = document.getElementById('settings-supabase-url');
   const keyInput = document.getElementById('settings-supabase-key');
   if (urlInput) urlInput.value = url || '';
@@ -129,6 +133,9 @@ async function pullFromSupabase() {
           if (s.key === 'customer_sort_order') {
             customerSortOrder = s.value;
             localStorage.setItem('customer_sort_order', s.value);
+          }
+          if (s.key === 'zandi_password') {
+            localStorage.setItem('zandi_password', s.value);
           }
         });
       }

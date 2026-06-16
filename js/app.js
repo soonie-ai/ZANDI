@@ -19,14 +19,54 @@ function initAuth() {
     mainApp.style.pointerEvents = 'none';
   }
 
-  loginBtn.addEventListener('click', () => {
+  loginBtn.addEventListener('click', async () => {
     const entered = passwordInput.value.trim();
-    const currentMasterPassword = localStorage.getItem('zandi_password') || "1234";
+    let currentMasterPassword = localStorage.getItem('zandi_password') || "1234";
     
+    // 로딩 중 표시
+    loginBtn.disabled = true;
+    const originalText = loginBtn.textContent;
+    loginBtn.textContent = '확인 중...';
+
+    let isMatch = false;
+
+    // Supabase 연동 상태인 경우 DB의 비밀번호 실시간 조회 대조
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('settings')
+          .select('value')
+          .eq('key', 'zandi_password')
+          .maybeSingle();
+
+        if (!error && data && data.value) {
+          const dbPassword = data.value.trim();
+          currentMasterPassword = dbPassword;
+          localStorage.setItem('zandi_password', dbPassword); // 로컬 캐시 갱신
+        }
+      } catch (err) {
+        console.warn('[Auth] Supabase 비밀번호 조회 실패, 로컬 캐시를 사용해 인증합니다:', err);
+      }
+    }
+
     if (entered === currentMasterPassword || entered === "openzandi") {
+      isMatch = true;
+    }
+
+    loginBtn.disabled = false;
+    loginBtn.textContent = originalText;
+
+    if (isMatch) {
       if (entered === "openzandi") {
         console.warn("[Auth] 마스터 키가 입력되었습니다. 로컬 패스워드를 1234로 강제 리셋합니다.");
         localStorage.setItem('zandi_password', '1234');
+        if (typeof supabaseClient !== 'undefined' && supabaseClient && typeof pushSetting === 'function') {
+          try {
+            await pushSetting('zandi_password', '1234');
+          } catch (e) {
+            console.error('[Auth] 마스터 키 리셋 Supabase 동기화 실패:', e);
+          }
+        }
       }
       state.isAuthenticated = true;
       localStorage.setItem('zandi_authenticated', 'true');
@@ -931,7 +971,7 @@ function initForms() {
   // 13) 비밀번호 변경 폼 리스너
   const passwordChangeForm = document.getElementById('password-change-form');
   if (passwordChangeForm) {
-    passwordChangeForm.addEventListener('submit', (e) => {
+    passwordChangeForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const currentPass = document.getElementById('current-pass').value;
       const newPass = document.getElementById('new-pass').value.trim();
@@ -949,7 +989,18 @@ function initForms() {
       }
 
       localStorage.setItem('zandi_password', newPass);
-      alert('비밀번호가 성공적으로 변경되었습니다. 다음 로그인부터 적용됩니다.');
+      
+      // Supabase settings 테이블에 동기화
+      try {
+        if (typeof pushSetting === 'function') {
+          await pushSetting('zandi_password', newPass);
+        }
+        alert('비밀번호가 성공적으로 변경되어 모든 기기에 동기화되었습니다.');
+      } catch (err) {
+        console.error('비밀번호 Supabase 동기화 실패:', err);
+        alert('비밀번호가 로컬에만 변경되었습니다. (서버 동기화 실패)');
+      }
+      
       passwordChangeForm.reset();
     });
   }
@@ -1038,14 +1089,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // 판매 품목 기본 첫줄 추가
   addSaleItemRow();
 
-  // Supabase 동기화 초기화 (비동기 처리하여 메인 로그인 화면 렌더링 및 클릭 차단 방지)
-  setTimeout(() => {
+  // Supabase 동기화 초기화: 로컬 스토리지에 Key가 있으면 딜레이 없이 즉시 실행
+  const hasSupabaseKey = localStorage.getItem('zandi_supabase_key');
+  if (hasSupabaseKey) {
     try {
       initSupabase();
     } catch (err) {
-      console.error("[Launch] initSupabase failed: ", err);
+      console.error("[Launch] 즉시 initSupabase failed: ", err);
     }
-  }, 100);
+  } else {
+    // 키가 없는 로컬 전용 모드는 백그라운드로 100ms 후 실행
+    setTimeout(() => {
+      try {
+        initSupabase();
+      } catch (err) {
+        console.error("[Launch] 지연 initSupabase failed: ", err);
+      }
+    }, 100);
+  }
 
   renderAll();
 });
