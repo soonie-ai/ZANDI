@@ -2,99 +2,131 @@
 function initAuth() {
   const loginOverlay = document.getElementById('login-overlay');
   const loginBtn = document.getElementById('login-btn');
+  const emailInput = document.getElementById('email-input');
   const passwordInput = document.getElementById('password-input');
   const loginError = document.getElementById('login-error');
   const mainApp = document.getElementById('main-app');
   const logoutBtn = document.getElementById('logout-btn');
+  const settingsCurrentEmail = document.getElementById('settings-current-email');
 
-  const MASTER_PASSWORD = localStorage.getItem('zandi_password') || "1234";
-
-  if (state.isAuthenticated) {
-    loginOverlay.style.display = 'none';
-    mainApp.style.opacity = '1';
-    mainApp.style.pointerEvents = 'auto';
-  } else {
-    loginOverlay.style.display = 'flex';
-    mainApp.style.opacity = '0.05';
-    mainApp.style.pointerEvents = 'none';
-  }
-
-  loginBtn.addEventListener('click', async () => {
-    const entered = passwordInput.value.trim();
-    let currentMasterPassword = localStorage.getItem('zandi_password') || "1234";
-    
-    // 로딩 중 표시
-    loginBtn.disabled = true;
-    const originalText = loginBtn.textContent;
-    loginBtn.textContent = '확인 중...';
-
-    let isMatch = false;
-
-    // Supabase 연동 상태인 경우 DB의 비밀번호 실시간 조회 대조
-    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-      try {
-        const { data, error } = await supabaseClient
-          .from('settings')
-          .select('value')
-          .eq('key', 'zandi_password')
-          .maybeSingle();
-
-        if (!error && data && data.value) {
-          const dbPassword = data.value.trim();
-          currentMasterPassword = dbPassword;
-          localStorage.setItem('zandi_password', dbPassword); // 로컬 캐시 갱신
-        }
-      } catch (err) {
-        console.warn('[Auth] Supabase 비밀번호 조회 실패, 로컬 캐시를 사용해 인증합니다:', err);
-      }
-    }
-
-    if (entered === currentMasterPassword || entered === "openzandi") {
-      isMatch = true;
-    }
-
-    loginBtn.disabled = false;
-    loginBtn.textContent = originalText;
-
-    if (isMatch) {
-      if (entered === "openzandi") {
-        console.warn("[Auth] 마스터 키가 입력되었습니다. 로컬 패스워드를 1234로 강제 리셋합니다.");
-        localStorage.setItem('zandi_password', '1234');
-        if (typeof supabaseClient !== 'undefined' && supabaseClient && typeof pushSetting === 'function') {
-          try {
-            await pushSetting('zandi_password', '1234');
-          } catch (e) {
-            console.error('[Auth] 마스터 키 리셋 Supabase 동기화 실패:', e);
-          }
-        }
-      }
-      state.isAuthenticated = true;
-      localStorage.setItem('zandi_authenticated', 'true');
+  // UI 상태 변화 헬퍼
+  const setLoginUIState = (authenticated, email = null) => {
+    if (authenticated) {
       loginOverlay.style.display = 'none';
       mainApp.style.opacity = '1';
       mainApp.style.pointerEvents = 'auto';
-      renderAll();
+      if (settingsCurrentEmail && email) {
+        settingsCurrentEmail.textContent = email;
+      }
     } else {
-      loginError.style.display = 'block';
-      passwordInput.value = '';
-    }
-  });
-
-  passwordInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') loginBtn.click();
-  });
-
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-      state.isAuthenticated = false;
-      localStorage.removeItem('zandi_authenticated');
       loginOverlay.style.display = 'flex';
       mainApp.style.opacity = '0.05';
       mainApp.style.pointerEvents = 'none';
-      passwordInput.value = '';
+      if (settingsCurrentEmail) {
+        settingsCurrentEmail.textContent = '-';
+      }
+    }
+  };
+
+  // 1) 초기 세션 상태에 따른 UI 초기 설정
+  setLoginUIState(state.isAuthenticated, localStorage.getItem('zandi_user_email'));
+
+  // 2) 로그인 버튼 클릭
+  loginBtn.addEventListener('click', async () => {
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+
+    if (!email || !password) {
+      alert('이메일과 비밀번호를 모두 입력해 주세요.');
+      return;
+    }
+
+    loginBtn.disabled = true;
+    const originalText = loginBtn.textContent;
+    loginBtn.textContent = '로그인 중...';
+    loginError.style.display = 'none';
+
+    try {
+      // Supabase Auth 로그인 요청
+      const data = await signInWithSupabase(email, password);
+      
+      if (data && data.user) {
+        state.isAuthenticated = true;
+        localStorage.setItem('zandi_authenticated', 'true');
+        localStorage.setItem('zandi_user_email', data.user.email);
+        setLoginUIState(true, data.user.email);
+        
+        emailInput.value = '';
+        passwordInput.value = '';
+        
+        // Supabase 연결 완료 직후 데이터를 동기식 풀링
+        await pullFromSupabase();
+        renderAll();
+      }
+    } catch (err) {
+      console.error('로그인 실패:', err);
+      loginError.textContent = '이메일 또는 비밀번호가 일치하지 않거나 서버 연결 오류입니다.';
+      loginError.style.display = 'block';
+    } finally {
+      loginBtn.disabled = false;
+      loginBtn.textContent = originalText;
+    }
+  });
+
+  // Enter 입력 시 로그인 트리거
+  const handleEnterKey = (e) => {
+    if (e.key === 'Enter') loginBtn.click();
+  };
+  if (emailInput) emailInput.addEventListener('keypress', handleEnterKey);
+  if (passwordInput) passwordInput.addEventListener('keypress', handleEnterKey);
+
+  // 3) 로그아웃 버튼
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      const confirmLogout = confirm('안전하게 로그아웃하시겠습니까?');
+      if (!confirmLogout) return;
+
+      try {
+        await signOutFromSupabase();
+      } catch (err) {
+        console.warn('Supabase 로그아웃 중 예외 발생 (무시하고 로컬 세션 해제):', err);
+      }
+
+      state.isAuthenticated = false;
+      localStorage.removeItem('zandi_authenticated');
+      localStorage.removeItem('zandi_user_email');
+      
+      setLoginUIState(false);
+      
+      if (emailInput) emailInput.value = '';
+      if (passwordInput) passwordInput.value = '';
       loginError.style.display = 'none';
+
+      // 설정 모달이 닫히도록 처리
+      const settingsModal = document.getElementById('settings-modal');
+      if (settingsModal) settingsModal.classList.add('hidden');
     });
   }
+
+  // 4) Supabase Auth 실시간 세션 감지 리스너 추가
+  setTimeout(() => {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+      supabaseClient.auth.onAuthStateChange((event, session) => {
+        console.log('[Auth Listener] Event:', event);
+        if (session && session.user) {
+          state.isAuthenticated = true;
+          localStorage.setItem('zandi_authenticated', 'true');
+          localStorage.setItem('zandi_user_email', session.user.email);
+          setLoginUIState(true, session.user.email);
+        } else if (event === 'SIGNED_OUT') {
+          state.isAuthenticated = false;
+          localStorage.removeItem('zandi_authenticated');
+          localStorage.removeItem('zandi_user_email');
+          setLoginUIState(false);
+        }
+      });
+    }
+  }, 500);
 }
 
 // 3. Navigation / Tab Switching
@@ -859,36 +891,7 @@ function initForms() {
     });
   }
 
-  // 11) Supabase Settings Form Submit
-  document.getElementById('settings-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const url = document.getElementById('settings-supabase-url').value.trim();
-    const key = document.getElementById('settings-supabase-key').value.trim();
-    
-    if (url && key) {
-      if (key === "1234" || key.length < 15) {
-        alert("경고: 올바르지 않은 Supabase Key 형식입니다. 비밀번호 자동완성으로 인해 오염되었을 수 있으니 다시 기입해주세요.");
-        return;
-      }
-      localStorage.setItem('zandi_supabase_url', url);
-      localStorage.setItem('zandi_supabase_key', key);
-      alert('Supabase 설정이 저장되었습니다. 동기화를 진행합니다.');
-      initSupabase();
-      
-      const settingsModal = document.getElementById('settings-modal');
-      if (settingsModal) settingsModal.classList.add('hidden');
-    }
-  });
-
-  document.getElementById('clear-settings-btn').addEventListener('click', () => {
-    localStorage.removeItem('zandi_supabase_url');
-    localStorage.removeItem('zandi_supabase_key');
-    alert('Supabase 연동이 해제되었습니다. 이제 기기 로컬 모드로 동작합니다.');
-    
-    const settingsModal = document.getElementById('settings-modal');
-    if (settingsModal) settingsModal.classList.add('hidden');
-    location.reload();
-  });
+  // 11) (이전 Supabase 설정 폼 제거됨)
 
   // 12) Customer & Sale Edit Modal Event Listeners
   const closeCustEditBtn = document.getElementById('close-cust-edit-modal-btn');
@@ -968,42 +971,7 @@ function initForms() {
     });
   }
 
-  // 13) 비밀번호 변경 폼 리스너
-  const passwordChangeForm = document.getElementById('password-change-form');
-  if (passwordChangeForm) {
-    passwordChangeForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const currentPass = document.getElementById('current-pass').value;
-      const newPass = document.getElementById('new-pass').value.trim();
-
-      const storedPass = localStorage.getItem('zandi_password') || "1234";
-
-      if (currentPass !== storedPass) {
-        alert('현재 비밀번호가 일치하지 않습니다.');
-        return;
-      }
-
-      if (newPass.length < 4) {
-        alert('새 비밀번호는 최소 4자리 이상이어야 합니다.');
-        return;
-      }
-
-      localStorage.setItem('zandi_password', newPass);
-      
-      // Supabase settings 테이블에 동기화
-      try {
-        if (typeof pushSetting === 'function') {
-          await pushSetting('zandi_password', newPass);
-        }
-        alert('비밀번호가 성공적으로 변경되어 모든 기기에 동기화되었습니다.');
-      } catch (err) {
-        console.error('비밀번호 Supabase 동기화 실패:', err);
-        alert('비밀번호가 로컬에만 변경되었습니다. (서버 동기화 실패)');
-      }
-      
-      passwordChangeForm.reset();
-    });
-  }
+  // 13) (이전 비밀번호 변경 폼 제거됨)
 
   // 14) 소유주 사장님 이름 연동 및 설정 모달 제어 로직
   const ownerNameInput = document.getElementById('owner-name-input');
@@ -1069,6 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.removeItem('zandi_supabase_url');
     localStorage.removeItem('zandi_supabase_key');
     localStorage.removeItem('zandi_authenticated');
+    localStorage.removeItem('zandi_user_email');
     localStorage.setItem('zandi_password', '1234');
     window.location.replace(window.location.origin + window.location.pathname);
     return;
@@ -1089,23 +1058,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // 판매 품목 기본 첫줄 추가
   addSaleItemRow();
 
-  // Supabase 동기화 초기화: 로컬 스토리지에 Key가 있으면 딜레이 없이 즉시 실행
-  const hasSupabaseKey = localStorage.getItem('zandi_supabase_key');
-  if (hasSupabaseKey) {
-    try {
-      initSupabase();
-    } catch (err) {
-      console.error("[Launch] 즉시 initSupabase failed: ", err);
-    }
-  } else {
-    // 키가 없는 로컬 전용 모드는 백그라운드로 100ms 후 실행
-    setTimeout(() => {
-      try {
-        initSupabase();
-      } catch (err) {
-        console.error("[Launch] 지연 initSupabase failed: ", err);
-      }
-    }, 100);
+  // Supabase 동기화 초기화: 즉시 실행 (상수 기반 로드 가능)
+  try {
+    initSupabase();
+  } catch (err) {
+    console.error("[Launch] initSupabase failed: ", err);
   }
 
   renderAll();

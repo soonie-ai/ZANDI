@@ -1,13 +1,25 @@
 // ZANDI 장부 시스템 - Supabase Database Synchronization (js/db.js)
 
+// =========================================================================
+// [필독] 사장님 부부 Supabase 연동 정보 설정 구역
+// 이 상수에 본인의 Supabase URL과 Key를 직접 입력하시면 연동이 영구적으로 고정됩니다.
+// (비어있거나 플레이스홀더일 경우 기존 로컬스토리지 저장 정보로 폴백)
+// =========================================================================
+const SUPABASE_URL = "https://your-project.supabase.co";
+const SUPABASE_KEY = "your-anon-key";
+
 // Supabase Global Client
 let supabaseClient = null;
 let realtimeChannel = null;
 
 // Supabase Cloud Sync Operations
 async function initSupabase() {
-  const url = localStorage.getItem('zandi_supabase_url');
-  const key = localStorage.getItem('zandi_supabase_key');
+  // 1) 상수가 채워져 있다면 상수를 우선 사용하고, 비어있다면 로컬 스토리지에서 폴백
+  const isHardcodedUrl = SUPABASE_URL && SUPABASE_URL !== "https://your-project.supabase.co";
+  const isHardcodedKey = SUPABASE_KEY && SUPABASE_KEY !== "your-anon-key";
+
+  const url = isHardcodedUrl ? SUPABASE_URL : localStorage.getItem('zandi_supabase_url');
+  const key = isHardcodedKey ? SUPABASE_KEY : localStorage.getItem('zandi_supabase_key');
   const indicator = document.getElementById('sync-indicator');
 
   // 키가 존재하면 UI가 로컬 모드로 풀려 보이지 않도록 즉각 '연동중' 상태 표시
@@ -15,11 +27,9 @@ async function initSupabase() {
     indicator.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block mr-1"></span> 부부 실시간 연동중';
   }
 
-  // localStorage에 저장된 값을 검증 없이 그대로 input에 복원
-  const urlInput = document.getElementById('settings-supabase-url');
-  const keyInput = document.getElementById('settings-supabase-key');
-  if (urlInput) urlInput.value = url || '';
-  if (keyInput) keyInput.value = key || '';
+  // 로컬스토리지에 하드코딩된 정보를 캐시 업데이트(백업)
+  if (isHardcodedUrl) localStorage.setItem('zandi_supabase_url', SUPABASE_URL);
+  if (isHardcodedKey) localStorage.setItem('zandi_supabase_key', SUPABASE_KEY);
 
   console.log('[initSupabase] 로드:', url ? 'URL있음' : 'URL없음', key ? `KEY있음(${key.length}자)` : 'KEY없음');
 
@@ -62,6 +72,26 @@ async function initSupabase() {
     if (indicator) {
       indicator.innerHTML = '<span class="w-2 h-2 rounded-full bg-neutral-600 inline-block mr-1"></span> 로컬 전용 모드';
     }
+  }
+}
+
+// Supabase Auth 로그인 요청 함수
+async function signInWithSupabase(email, password) {
+  if (!supabaseClient) {
+    throw new Error('Supabase 클라이언트가 초기화되지 않았습니다. 먼저 설정을 완료해 주세요.');
+  }
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email: email,
+    password: password
+  });
+  if (error) throw error;
+  return data;
+}
+
+// Supabase Auth 로그아웃 요청 함수
+async function signOutFromSupabase() {
+  if (supabaseClient) {
+    await supabaseClient.auth.signOut();
   }
 }
 

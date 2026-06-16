@@ -45,12 +45,14 @@
         <i data-lucide="lock" class="w-12 h-12"></i>
       </div>
       <h2 class="text-2xl font-bold mb-2 tracking-wide">ZANDI LEDGER</h2>
-      <p class="text-sm text-slate-400 mb-6">1인 사장님 전용 보안 로그인</p>
+      <p class="text-sm text-slate-400 mb-6">부부 공동 전용 장부 로그인</p>
       
-      <div class="mb-4">
-        <input type="password" id="password-input" placeholder="비밀번호 입력 (기본: 1234)" 
-          class="w-full bg-black/40 border border-zandiBorder text-center text-xl tracking-widest text-zandiPrimary rounded-xl py-3 px-4 focus:outline-none focus:border-zandiPrimary focus:ring-1 focus:ring-zandiPrimary transition-all duration-300">
-        <p id="login-error" class="text-rose-400 text-xs mt-2 hidden">비밀번호가 일치하지 않습니다.</p>
+      <div class="mb-4 space-y-3">
+        <input type="email" id="email-input" placeholder="이메일 아이디 입력" 
+          class="w-full bg-black/40 border border-zandiBorder text-center text-sm text-white rounded-xl py-3 px-4 focus:outline-none focus:border-zandiPrimary focus:ring-1 focus:ring-zandiPrimary transition-all duration-300">
+        <input type="password" id="password-input" placeholder="비밀번호 입력" 
+          class="w-full bg-black/40 border border-zandiBorder text-center text-sm tracking-widest text-zandiPrimary rounded-xl py-3 px-4 focus:outline-none focus:border-zandiPrimary focus:ring-1 focus:ring-zandiPrimary transition-all duration-300">
+        <p id="login-error" class="text-rose-400 text-xs mt-2 hidden">이메일 또는 비밀번호가 일치하지 않습니다.</p>
       </div>
 
       <button id="login-btn" class="w-full btn-primary justify-center py-3 text-base">
@@ -941,55 +943,27 @@
         </div>
       </div>
 
-      <!-- 부부 연동 설정 -->
-      <div class="space-y-3">
-        <h4 class="text-sm font-semibold text-white">부부 실시간 데이터 연동 설정</h4>
+      <!-- 부부 공동 연동 정보 및 로그아웃 -->
+      <div class="space-y-4 border-t border-zandiBorder/20 pt-4">
+        <h4 class="text-sm font-semibold text-white">부부 실시간 연동 정보</h4>
         <p class="text-xs text-slate-400 leading-relaxed">
-          이 장부는 기본적으로 브라우저(로컬 스토리지)에 저장되므로, 다른 핸드폰이나 PC에서 남편분과 데이터를 같이 보고 쓰려면 Supabase 데이터베이스 연동이 필요합니다.<br>
-          Supabase URL 및 Key를 동일하게 입력하시면 부부의 핸드폰 간에 실시간으로 데이터가 안전하게 동기화됩니다.
+          이 장부는 부부 공동 전용 계정으로 로그인되어 실시간으로 클라우드에 안전하게 보존되고 있습니다. 이제 설정값을 수동으로 기입하거나 저장할 필요가 없으며, 다른 기기에서도 로그인만 하시면 완벽하게 연동됩니다.
         </p>
-        <form id="settings-form" class="space-y-3 bg-black/25 p-3 rounded-lg border border-zandiBorder/20">
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Supabase Project URL</label>
-           <input autocomplete="off" data-1p-ignore type="text" id="settings-supabase-url" placeholder="https://your-project..."
-              class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-xs">
+        <div class="bg-black/35 p-3 rounded-lg border border-zandiBorder/25 space-y-2 text-xs">
+          <div class="flex justify-between">
+            <span class="text-slate-400">현재 로그인 계정:</span>
+            <span id="settings-current-email" class="text-emerald-400 font-bold">-</span>
           </div>
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Supabase Anon Key</label>
-            <input autocomplete="off" data-1p-ignore type="text" id="settings-supabase-key" placeholder="Supabase Key를 입력하세요" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3">
+          <div class="flex justify-between">
+            <span class="text-slate-400">동기화 서버 상태:</span>
+            <span class="text-emerald-400 font-semibold flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span> 실시간 온라인
+            </span>
           </div>
-          <div class="flex items-center space-x-2 pt-1">
-            <button type="submit" class="btn-primary text-xs py-2">
-              설정 저장 및 연동 완료 <i data-lucide="check" class="w-3.5 h-3.5"></i>
-            </button>
-            <button type="button" id="clear-settings-btn" class="btn-secondary text-xs py-2 text-rose-400 border-rose-500/20">
-              연동 해제
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <!-- 비밀번호 변경 -->
-      <div class="space-y-3 border-t border-zandiBorder/20 pt-4">
-        <h4 class="text-sm font-semibold text-white">보안 로그인 비밀번호 변경</h4>
-        <p class="text-xs text-slate-400">
-          앱 로그인 시 사용하는 비밀번호를 변경합니다. (기본값: 1234)
-        </p>
-        <form id="password-change-form" class="space-y-3 bg-black/25 p-3 rounded-lg border border-zandiBorder/20">
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">현재 비밀번호</label>
-            <input type="password" id="current-pass" required placeholder="현재 비밀번호 입력"
-              class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-xs">
-          </div>
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">새 비밀번호</label>
-            <input type="password" id="new-pass" required placeholder="새 비밀번호 입력"
-              class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-xs">
-          </div>
-          <button type="submit" class="btn-primary text-xs py-2 w-full justify-center">
-            비밀번호 변경 완료 <i data-lucide="lock" class="w-3.5 h-3.5"></i>
-          </button>
-        </form>
+        </div>
+        <button type="button" id="logout-btn" class="w-full py-2.5 px-4 rounded-lg bg-rose-950/40 hover:bg-rose-950/60 text-rose-400 hover:text-rose-300 text-xs font-bold border border-rose-500/20 transition-all duration-300 flex items-center justify-center gap-1.5">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i> 안전 로그아웃
+        </button>
       </div>
     </div>
   </div>
