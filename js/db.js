@@ -276,6 +276,7 @@ async function pullFromSupabase() {
           }
         }
         console.log('[AutoSync] 초기 업로드 완료!');
+      }
     }
 
     if (exp && exp.length > 0) {
