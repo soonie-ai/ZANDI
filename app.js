@@ -762,7 +762,9 @@ function renderCustomers() {
     const prices = customer.prices || { '1818': 0, '1818t': 0, '3030': 0, '3030t': 0, '4060': 0, 'pyeong': 0, 'extra': 0 };
 
     const tr = document.createElement('tr');
-    tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
+    tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20 customer-row-draggable';
+    tr.setAttribute('draggable', 'true');
+    tr.dataset.id = customer.id;
     tr.innerHTML = `
       <td class="p-3 text-white font-medium">${customer.name}</td>
       <td class="p-3 text-gray-400">${customer.phone || '-'}</td>
@@ -808,6 +810,75 @@ function renderCustomers() {
         </div>
       </td>
     `;
+
+    // --- Drag and Drop Events (Mouse) ---
+    tr.addEventListener('dragstart', (e) => {
+      tr.classList.add('opacity-40');
+      e.dataTransfer.setData('text/plain', customer.id);
+    });
+
+    tr.addEventListener('dragend', () => {
+      tr.classList.remove('opacity-40');
+      document.querySelectorAll('.customer-row-draggable').forEach(row => {
+        row.classList.remove('bg-emerald-950/40');
+      });
+    });
+
+    tr.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      tr.classList.add('bg-emerald-950/40');
+    });
+
+    tr.addEventListener('dragleave', () => {
+      tr.classList.remove('bg-emerald-950/40');
+    });
+
+    tr.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      const draggedId = e.dataTransfer.getData('text/plain');
+      const targetId = tr.dataset.id;
+      if (draggedId && draggedId !== targetId) {
+        await reorderCustomers(draggedId, targetId);
+      }
+    });
+
+    // --- Drag and Drop Events (Touch for Mobile) ---
+    let touchStartY = 0;
+    tr.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches[0].clientY;
+      tr.classList.add('opacity-40');
+    }, { passive: true });
+
+    tr.addEventListener('touchmove', (e) => {
+      const touchY = e.touches[0].clientY;
+      const element = document.elementFromPoint(e.touches[0].clientX, touchY);
+      const targetTr = element ? element.closest('.customer-row-draggable') : null;
+      
+      document.querySelectorAll('.customer-row-draggable').forEach(row => {
+        row.classList.remove('bg-emerald-950/40');
+      });
+      if (targetTr && targetTr !== tr) {
+        targetTr.classList.add('bg-emerald-950/40');
+      }
+    }, { passive: true });
+
+    tr.addEventListener('touchend', async (e) => {
+      tr.classList.remove('opacity-40');
+      const touchY = e.changedTouches[0].clientY;
+      const element = document.elementFromPoint(e.changedTouches[0].clientX, touchY);
+      const targetTr = element ? element.closest('.customer-row-draggable') : null;
+      
+      document.querySelectorAll('.customer-row-draggable').forEach(row => {
+        row.classList.remove('bg-emerald-950/40');
+      });
+
+      if (targetTr && targetTr !== tr) {
+        const draggedId = tr.dataset.id;
+        const targetId = targetTr.dataset.id;
+        await reorderCustomers(draggedId, targetId);
+      }
+    });
+
     customerList.appendChild(tr);
 
     // 대장 등록용 드롭다운 추가
@@ -3025,6 +3096,40 @@ window.moveCustomerDown = async function(id) {
   await pushCustomer(next);
   renderAll();
 };
+
+window.reorderCustomers = async function(draggedId, targetId) {
+  const sorted = [...state.customers].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  const draggedIndex = sorted.findIndex(c => c.id === draggedId);
+  const targetIndex = sorted.findIndex(c => c.id === targetId);
+  
+  if (draggedIndex === -1 || targetIndex === -1) return;
+  
+  const [draggedItem] = sorted.splice(draggedIndex, 1);
+  sorted.splice(targetIndex, 0, draggedItem);
+  
+  sorted.forEach((c, i) => {
+    c.sortOrder = i + 1;
+    const realCustomer = state.customers.find(item => item.id === c.id);
+    if (realCustomer) {
+      realCustomer.sortOrder = i + 1;
+    }
+  });
+  
+  saveState();
+  
+  if (supabaseClient) {
+    try {
+      for (const customer of state.customers) {
+        await pushCustomer(customer);
+      }
+    } catch (err) {
+      console.error("[reorderCustomers] Supabase sync failed:", err);
+    }
+  }
+  
+  renderAll();
+};
+
 
 
 
