@@ -322,19 +322,28 @@ async function pullFromSupabase() {
   }
 }
 
-async function pushCustomer(customer) {
+async function pushCustomers(customers) {
   if (!supabaseClient) return;
+  const list = Array.isArray(customers) ? customers : [customers];
+  const payload = list.map(customer => ({
+    id: customer.id,
+    name: customer.name,
+    phone: customer.phone,
+    prices: customer.prices,
+    initial_debt: customer.initialDebt || 0,
+    initial_debt_collected: customer.initialDebtCollected || 0,
+    sort_order: customer.sortOrder || 0
+  }));
+
   try {
-    await supabaseClient.from('customers').upsert({
-      id: customer.id,
-      name: customer.name,
-      phone: customer.phone,
-      prices: customer.prices,
-      initial_debt: customer.initialDebt || 0,
-      initial_debt_collected: customer.initialDebtCollected || 0,
-      sort_order: customer.sortOrder || 0
-    });
-  } catch (e) { console.error(e); }
+    const { error } = await supabaseClient.from('customers').upsert(payload);
+    if (error) {
+      console.error('[pushCustomers] Supabase 저장 오류:', error);
+    }
+  } catch (e) {
+    console.error('[pushCustomers] 예외 발생:', e);
+  }
+}
 }
 
 async function removeCustomerSupabase(id) {
@@ -1693,7 +1702,7 @@ function addCustomer(name, phone, prices, initialDebt) {
   const newCust = { id, name, phone, prices, initialDebt: Number(initialDebt) || 0, sortOrder: maxOrder + 1 };
   state.customers.push(newCust);
   saveState();
-  pushCustomer(newCust);
+  pushCustomers(newCust);
   renderAll();
 }
 
@@ -2709,7 +2718,7 @@ function initForms() {
       };
 
       saveState();
-      await pushCustomer(customer);
+      await pushCustomers(customer);
       renderAll();
       document.getElementById('customer-edit-modal').classList.add('hidden');
     });
@@ -2943,7 +2952,7 @@ window.collectDebtFromOlderSales = async function(customerId, payDate, payAmount
       const applyAmount = Math.min(remaining, initialUncollected);
       customer.initialDebtCollected = initialCollectedVal + applyAmount;
       remaining -= applyAmount;
-      await pushCustomer(customer);
+      await pushCustomers(customer);
       updatedCount++;
     }
   }
@@ -3124,8 +3133,7 @@ window.moveCustomerUp = async function(id) {
   prev.sortOrder = temp;
   
   saveState();
-  await pushCustomer(target);
-  await pushCustomer(prev);
+  await pushCustomers([target, prev]);
   renderAll();
 };
 
@@ -3146,8 +3154,7 @@ window.moveCustomerDown = async function(id) {
   next.sortOrder = temp;
   
   saveState();
-  await pushCustomer(target);
-  await pushCustomer(next);
+  await pushCustomers([target, next]);
   renderAll();
 };
 
@@ -3173,9 +3180,7 @@ window.reorderCustomers = async function(draggedId, targetId) {
   
   if (supabaseClient) {
     try {
-      for (const customer of state.customers) {
-        await pushCustomer(customer);
-      }
+      await pushCustomers(state.customers);
     } catch (err) {
       console.error("[reorderCustomers] Supabase sync failed:", err);
     }
