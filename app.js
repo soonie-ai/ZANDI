@@ -3130,6 +3130,40 @@ window.reorderCustomers = async function(draggedId, targetId) {
   renderAll();
 };
 
+window.bulkPayAttendance = async function() {
+  // 현재 설정된 필터 조건에 해당하고, 아직 지급되지 않은 출근 내역 추출
+  let targetEntries = state.attendance.filter(att => {
+    if (att.isPaid) return false;
+    if (attFilters.workerId && att.workerId !== attFilters.workerId) return false;
+    if (attFilters.workType && att.workType !== Number(attFilters.workType)) return false;
+    if (attFilters.startDate && att.workDate < attFilters.startDate) return false;
+    if (attFilters.endDate && att.workDate > attFilters.endDate) return false;
+    return true;
+  });
+
+  if (targetEntries.length === 0) {
+    showToast('선택한 조건에 해당하는 미지급 내역이 없습니다.', 'info');
+    return;
+  }
+
+  const confirmMsg = `필터링된 미지급 내역 ${targetEntries.length}건을 일괄 지급 완료 처리하시겠습니까?`;
+  if (!confirm(confirmMsg)) return;
+
+  // 일괄 업데이트 및 Supabase 동기화
+  for (const att of targetEntries) {
+    att.isPaid = true;
+    try {
+      await pushAttendance(att);
+    } catch (err) {
+      console.error("[bulkPayAttendance] Supabase sync failed:", err);
+    }
+  }
+
+  saveState();
+  renderAll();
+  showToast(`총 ${targetEntries.length}건의 인건비가 일괄 지급 완료 처리되었습니다.`, 'success');
+};
+
 
 
 
