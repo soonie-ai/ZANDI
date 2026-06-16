@@ -917,6 +917,7 @@ function initForms() {
         }
       } catch (err) {
         console.error('[editExpenseForm] Supabase 수정 실패, 로컬 데이터는 유지됩니다:', err);
+        showToast('서버 저장 실패: 데이터베이스 권한 또는 컬럼 오류 (로컬에 임시 보존됨)', 'warning');
       }
     });
   }
