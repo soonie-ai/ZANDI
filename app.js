@@ -287,21 +287,32 @@ async function pullFromSupabase() {
 
       // 로컬에만 있고 Supabase에 없는 항목 → 자동 업로드 (누락 데이터 보완)
       const supabaseIds = new Set(ren.map(r => r.id));
-      const localOnly = (JSON.parse(localStorage.getItem('zandi_state') || '{}').rents || [])
-        .filter(r => !supabaseIds.has(r.id));
+      const localOnly = (JSON.parse(localStorage.getItem('zandi_ledger_data') || '{}').rents || [])
+        .filter(r => !supabaseIds.has(r.id) && !r.id.startsWith('rent-'));
       if (localOnly.length > 0) {
         console.log(`[AutoSync] Supabase에 없는 로컬 데이터 ${localOnly.length}건 자동 업로드...`);
         for (const rent of localOnly) {
-          await pushRent(rent);
+          try {
+            await pushRent(rent);
+          } catch (err) {
+            console.warn("[AutoSync] Local only rent upload failed:", err);
+          }
         }
       }
     } else if (state.rents && state.rents.length > 0) {
-      // Supabase가 완전히 비어있고 로컬에 데이터가 있으면 → 전체 초기 업로드
-      console.log(`[AutoSync] 초기 동기화: 로컬 데이터 ${state.rents.length}건 업로드...`);
-      for (const rent of state.rents) {
-        await pushRent(rent);
+      // Supabase가 완전히 비어있고 로컬에 데이터가 있으면 → 실제 사용자가 등록한 데이터만 초기 업로드
+      const realRents = state.rents.filter(r => !r.id.startsWith('rent-'));
+      if (realRents.length > 0) {
+        console.log(`[AutoSync] 초기 동기화: 로컬 데이터 ${realRents.length}건 업로드...`);
+        for (const rent of realRents) {
+          try {
+            await pushRent(rent);
+          } catch (err) {
+            console.warn("[AutoSync] Initial rent upload failed:", err);
+          }
+        }
+        console.log('[AutoSync] 초기 업로드 완료!');
       }
-      console.log('[AutoSync] 초기 업로드 완료!');
     }
 
     saveState();
@@ -414,7 +425,8 @@ async function pushRent(rent) {
     });
     if (error) {
       console.error('[pushRent] Supabase 저장 오류:', error);
-      showToast(`임대료 저장 실패: ${error.message}`, 'error');
+      const detail = error.details || error.hint || '';
+      showToast(`임대료 저장 실패: ${error.message} ${detail ? `(${detail})` : ''}`, 'error');
       throw error;
     }
   } catch (e) {
@@ -750,7 +762,9 @@ function renderCustomers() {
     const prices = customer.prices || { '1818': 0, '1818t': 0, '3030': 0, '3030t': 0, '4060': 0, 'pyeong': 0, 'extra': 0 };
 
     const tr = document.createElement('tr');
-    tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
+    tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20 customer-row-draggable';
+    tr.setAttribute('draggable', 'true');
+    tr.dataset.id = customer.id;
     tr.innerHTML = `
       <td class="p-3 text-white font-medium">${customer.name}</td>
       <td class="p-3 text-gray-400">${customer.phone || '-'}</td>
@@ -796,6 +810,75 @@ function renderCustomers() {
         </div>
       </td>
     `;
+
+    // --- Drag and Drop Events (Mouse) ---
+    tr.addEventListener('dragstart', (e) => {
+      tr.classList.add('opacity-40');
+      e.dataTransfer.setData('text/plain', customer.id);
+    });
+
+    tr.addEventListener('dragend', () => {
+      tr.classList.remove('opacity-40');
+      document.querySelectorAll('.customer-row-draggable').forEach(row => {
+        row.classList.remove('bg-emerald-950/40');
+      });
+    });
+
+    tr.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      tr.classList.add('bg-emerald-950/40');
+    });
+
+    tr.addEventListener('dragleave', () => {
+      tr.classList.remove('bg-emerald-950/40');
+    });
+
+    tr.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      const draggedId = e.dataTransfer.getData('text/plain');
+      const targetId = tr.dataset.id;
+      if (draggedId && draggedId !== targetId) {
+        await reorderCustomers(draggedId, targetId);
+      }
+    });
+
+    // --- Drag and Drop Events (Touch for Mobile) ---
+    let touchStartY = 0;
+    tr.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches[0].clientY;
+      tr.classList.add('opacity-40');
+    }, { passive: true });
+
+    tr.addEventListener('touchmove', (e) => {
+      const touchY = e.touches[0].clientY;
+      const element = document.elementFromPoint(e.touches[0].clientX, touchY);
+      const targetTr = element ? element.closest('.customer-row-draggable') : null;
+      
+      document.querySelectorAll('.customer-row-draggable').forEach(row => {
+        row.classList.remove('bg-emerald-950/40');
+      });
+      if (targetTr && targetTr !== tr) {
+        targetTr.classList.add('bg-emerald-950/40');
+      }
+    }, { passive: true });
+
+    tr.addEventListener('touchend', async (e) => {
+      tr.classList.remove('opacity-40');
+      const touchY = e.changedTouches[0].clientY;
+      const element = document.elementFromPoint(e.changedTouches[0].clientX, touchY);
+      const targetTr = element ? element.closest('.customer-row-draggable') : null;
+      
+      document.querySelectorAll('.customer-row-draggable').forEach(row => {
+        row.classList.remove('bg-emerald-950/40');
+      });
+
+      if (targetTr && targetTr !== tr) {
+        const draggedId = tr.dataset.id;
+        const targetId = targetTr.dataset.id;
+        await reorderCustomers(draggedId, targetId);
+      }
+    });
+
     customerList.appendChild(tr);
 
     // 대장 등록용 드롭다운 추가
@@ -3008,4 +3091,43 @@ window.moveCustomerDown = async function(id) {
   await pushCustomer(next);
   renderAll();
 };
+
+window.reorderCustomers = async function(draggedId, targetId) {
+  const sorted = [...state.customers].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  const draggedIndex = sorted.findIndex(c => c.id === draggedId);
+  const targetIndex = sorted.findIndex(c => c.id === targetId);
+  
+  if (draggedIndex === -1 || targetIndex === -1) return;
+  
+  // 드래그된 항목을 배열에서 제거 후 목표 타겟 인덱스 위치에 삽입
+  const [draggedItem] = sorted.splice(draggedIndex, 1);
+  sorted.splice(targetIndex, 0, draggedItem);
+  
+  // 모든 항목의 sortOrder를 1부터 다시 매핑
+  sorted.forEach((c, i) => {
+    c.sortOrder = i + 1;
+    // state.customers 배열 내 실제 객체 참조의 sortOrder 업데이트
+    const realCustomer = state.customers.find(item => item.id === c.id);
+    if (realCustomer) {
+      realCustomer.sortOrder = i + 1;
+    }
+  });
+  
+  // 로컬 및 서버 저장소에 반영
+  saveState();
+  
+  if (supabaseClient) {
+    try {
+      // 순서가 바뀐 대상들을 Supabase에 업데이트
+      for (const customer of state.customers) {
+        await pushCustomer(customer);
+      }
+    } catch (err) {
+      console.error("[reorderCustomers] Supabase sync failed:", err);
+    }
+  }
+  
+  renderAll();
+};
+
 
