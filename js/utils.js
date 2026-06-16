@@ -32,3 +32,43 @@ function formatAmountInput(value) {
   if (!digits) return '';
   return Number(digits).toLocaleString('ko-KR');
 }
+
+/**
+ * 금액 필드에 콤마 포맷 및 포커스 시 선택/지우기 이벤트 연결
+ */
+function attachAmountFormat(inputIdOrElement) {
+  const el = typeof inputIdOrElement === 'string' ? document.getElementById(inputIdOrElement) : inputIdOrElement;
+  if (!el) return;
+  
+  el.type = 'text';
+  el.inputMode = 'numeric';
+
+  el.addEventListener('focus', (e) => {
+    const rawVal = e.target.value.replace(/[^0-9]/g, '');
+    if (rawVal === '0' || rawVal === '') {
+      e.target.value = '';
+    } else {
+      e.target.select();
+    }
+  });
+
+  el.addEventListener('blur', (e) => {
+    const rawVal = e.target.value.replace(/[^0-9]/g, '');
+    if (rawVal === '') {
+      e.target.value = '0';
+    }
+  });
+
+  el.addEventListener('input', (e) => {
+    const formatted = formatAmountInput(e.target.value);
+    const originalSelectionStart = e.target.selectionStart;
+    const originalLength = e.target.value.length;
+    
+    e.target.value = formatted;
+    
+    const newLength = formatted.length;
+    const diff = newLength - originalLength;
+    e.target.setSelectionRange(originalSelectionStart + diff, originalSelectionStart + diff);
+  });
+}
+
