@@ -123,6 +123,19 @@
       </div>
 
       <div class="flex flex-col gap-2 w-full mt-auto" id="sidebar-actions-container">
+        <!-- 임시 임대료 데이터 복사 버튼 (복사 시 자동 삭제됨) -->
+        <button id="temp-copy-btn" onclick="
+          navigator.clipboard.writeText(JSON.stringify(state.rents, null, 2)).then(() => {
+            alert('임대료 데이터가 클립보드에 안전하게 복사되었습니다. 이제 채팅창에 붙여넣기 하시면 됩니다!');
+            document.getElementById('temp-copy-btn').remove();
+          }).catch(err => {
+            alert('복사 실패, 콘솔 우측 클릭 프레임 설정을 확인해주세요.');
+          });
+        " class="flex items-center justify-center space-x-2 w-full py-2.5 px-4 rounded-lg bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/40 text-amber-300 hover:text-white transition-all duration-300 text-xs font-bold" title="임시 임대료 데이터 복사">
+          <i data-lucide="copy" class="w-4 h-4"></i>
+          <span>임대 장부 복사하기</span>
+        </button>
+
         <!-- 실시간 연동 상태 표시등 -->
         <span id="sync-indicator" class="text-[10px] px-2 py-1.5 rounded bg-black/40 border border-zandiBorder/20 text-slate-400 font-semibold flex items-center justify-center gap-1.5" title="데이터 동기화 상태">
           <span class="w-1.5 h-1.5 rounded-full bg-neutral-500 inline-block"></span> 로컬
@@ -1640,7 +1653,7 @@
   <script src="js/state.js?v=2036"></script>
   <script src="js/utils.js?v=2036"></script>
   <script src="js/db.js?v=2036"></script>
-  <script src="js/ui.js?v=2038"></script>
+  <script src="js/ui.js?v=2039"></script>
   <script src="js/app.js?v=2036"></script>
 </body>
 </html>
