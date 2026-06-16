@@ -23,7 +23,12 @@ async function initSupabase() {
 
   console.log('[initSupabase] 로드:', url ? 'URL있음' : 'URL없음', key ? `KEY있음(${key.length}자)` : 'KEY없음');
 
-  if (url && key && window.supabase) {
+  if (url && key) {
+    if (!window.supabase) {
+      console.warn('[initSupabase] window.supabase가 아직 준비되지 않았습니다. 100ms 후 다시 시도합니다.');
+      setTimeout(initSupabase, 100);
+      return;
+    }
     try {
       supabaseClient = window.supabase.createClient(url, key);
       
