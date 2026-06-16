@@ -7,34 +7,19 @@ let realtimeChannel = null;
 // Supabase Cloud Sync Operations
 async function initSupabase() {
   const url = localStorage.getItem('zandi_supabase_url');
-  let key = localStorage.getItem('zandi_supabase_key');
+  const key = localStorage.getItem('zandi_supabase_key');
   const indicator = document.getElementById('sync-indicator');
-  
-  // input fields prefill - localStorage 값으로 채우기 (절대 자동 삭제하지 않음)
-  // 단, 브라우저 자동완성으로 '1234' 같은 비밀번호가 들어온 경우만 무시
-  const isAutocompletePolluted = (val) => !val || val === '1234' || val === 'openzandi' || val.length < 15;
 
-  if (url && !isAutocompletePolluted(url)) {
-    document.getElementById('settings-supabase-url').value = url;
-  } else {
-    document.getElementById('settings-supabase-url').value = '';
-  }
-  
-  if (key && !isAutocompletePolluted(key)) {
-    document.getElementById('settings-supabase-key').value = key;
-  } else {
-    document.getElementById('settings-supabase-key').value = '';
-    if (key && isAutocompletePolluted(key)) {
-      console.warn('[initSupabase] Key가 비밀번호처럼 보여 input에 표시하지 않음 (localStorage는 유지):', key.substring(0, 4) + '...');
-      key = null; // 연결 시도만 막고, localStorage는 건드리지 않음
-    }
-  }
+  // localStorage에 저장된 값을 검증 없이 그대로 input에 복원
+  // (autocomplete 방지는 HTML에서 type="text", autocomplete="off"로 처리)
+  const urlInput = document.getElementById('settings-supabase-url');
+  const keyInput = document.getElementById('settings-supabase-key');
+  if (urlInput) urlInput.value = url || '';
+  if (keyInput) keyInput.value = key || '';
 
-  const isValidUrl = url && !isAutocompletePolluted(url);
-  const isValidKey = key && !isAutocompletePolluted(key);
+  console.log('[initSupabase] 로드:', url ? 'URL있음' : 'URL없음', key ? `KEY있음(${key.length}자)` : 'KEY없음');
 
-
-  if (isValidUrl && isValidKey && window.supabase) {
+  if (url && key && window.supabase) {
     try {
       supabaseClient = window.supabase.createClient(url, key);
       
@@ -58,12 +43,9 @@ async function initSupabase() {
       if (indicator) {
         indicator.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500 inline-block mr-1"></span> 연동 오류';
       }
-      // alert 대행 - 화면 멈춤 방지를 위해 showToast 활용
       setTimeout(() => {
         if (typeof showToast === 'function') {
           showToast(`[Supabase 연동 실패] 주소/Key가 틀렸거나 RLS 설정 오류입니다.`, 'error');
-        } else {
-          alert(`[Supabase 연동 실패] 주소/Key를 확인해주세요.`);
         }
       }, 500);
     }
@@ -73,6 +55,7 @@ async function initSupabase() {
     }
   }
 }
+
 
 async function checkDatabaseSchema() {
   if (!supabaseClient) return;
