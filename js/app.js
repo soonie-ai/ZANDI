@@ -826,6 +826,10 @@ function initForms() {
     const key = document.getElementById('settings-supabase-key').value.trim();
     
     if (url && key) {
+      if (key === "1234" || key.length < 15) {
+        alert("경고: 올바르지 않은 Supabase Key 형식입니다. 비밀번호 자동완성으로 인해 오염되었을 수 있으니 다시 기입해주세요.");
+        return;
+      }
       localStorage.setItem('zandi_supabase_url', url);
       localStorage.setItem('zandi_supabase_key', key);
       alert('Supabase 설정이 저장되었습니다. 동기화를 진행합니다.');
