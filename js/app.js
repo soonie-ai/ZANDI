@@ -81,8 +81,14 @@ function initNavigation() {
 }
 
 // 4. Rendering logic
+function initRentYears() {
+  const currentYear = new Date().getFullYear();
+  const yearPrev = currentYear - 1;
+  const yearCurr = currentYear;
+  const yearNext = currentYear + 1;
 
-// 4.1. Dashboard View
+  // 4.1. Dashboard View
+  const thNext = document.getElementById('rent-header-year-next');
   if (thNext) thNext.textContent = `${yearNext}년`;
 
   // 1.5) 지급 여부 필터 연도 선택 옵션 생성 (최근 5개년 생성)
