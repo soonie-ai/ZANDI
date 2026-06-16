@@ -16,7 +16,8 @@ function initAuth() {
       mainApp.style.opacity = '1';
       mainApp.style.pointerEvents = 'auto';
       if (settingsCurrentEmail && email) {
-        settingsCurrentEmail.textContent = email;
+        // zandi.com 도메인은 화면 표시 시 생략하여 순수 아이디(moonie, soonie)만 노출
+        settingsCurrentEmail.textContent = email.replace('@zandi.com', '');
       }
     } else {
       loginOverlay.style.display = 'flex';
@@ -33,13 +34,16 @@ function initAuth() {
 
   // 2) 로그인 버튼 클릭
   loginBtn.addEventListener('click', async () => {
-    const email = emailInput.value.trim();
+    const enteredVal = emailInput.value.trim();
     const password = passwordInput.value.trim();
 
-    if (!email || !password) {
-      alert('이메일과 비밀번호를 모두 입력해 주세요.');
+    if (!enteredVal || !password) {
+      alert('아이디와 비밀번호를 모두 입력해 주세요.');
       return;
     }
+
+    // 아이디에 @가 없으면 기본 가상 도메인(@zandi.com)을 자동으로 덧붙임
+    const email = enteredVal.includes('@') ? enteredVal : `${enteredVal}@zandi.com`;
 
     loginBtn.disabled = true;
     const originalText = loginBtn.textContent;
@@ -65,7 +69,7 @@ function initAuth() {
       }
     } catch (err) {
       console.error('로그인 실패:', err);
-      loginError.textContent = '이메일 또는 비밀번호가 일치하지 않거나 서버 연결 오류입니다.';
+      loginError.textContent = '아이디 또는 비밀번호가 일치하지 않거나 서버 연결 오류입니다.';
       loginError.style.display = 'block';
     } finally {
       loginBtn.disabled = false;
