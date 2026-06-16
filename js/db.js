@@ -120,7 +120,7 @@ async function pullFromSupabase() {
     }
 
     // settings 테이블 풀 시도 (테이블이 없을 수 있으므로 try-catch로 예외 처리)
-    let customerSortOrder = null;
+    let customerSortOrder = localStorage.getItem('customer_sort_order') || null;
     try {
       const { data: settingsData, error: setErr } = await supabaseClient.from('settings').select('*');
       if (!setErr && settingsData) {
