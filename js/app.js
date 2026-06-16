@@ -23,7 +23,7 @@ function initAuth() {
     const entered = passwordInput.value.trim();
     const currentMasterPassword = localStorage.getItem('zandi_password') || "1234";
     
-    if (entered === currentMasterPassword || entered === "1234" || entered === "openzandi") {
+    if (entered === currentMasterPassword || entered === "openzandi") {
       if (entered === "openzandi") {
         console.warn("[Auth] 마스터 키가 입력되었습니다. 로컬 패스워드를 1234로 강제 리셋합니다.");
         localStorage.setItem('zandi_password', '1234');
