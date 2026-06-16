@@ -631,6 +631,10 @@ function renderAttendance() {
     if (attFilters.workType && att.workType !== Number(attFilters.workType)) return false;
     if (attFilters.startDate && att.workDate < attFilters.startDate) return false;
     if (attFilters.endDate && att.workDate > attFilters.endDate) return false;
+    if (attFilters.isPaid) {
+      if (attFilters.isPaid === 'paid' && !att.isPaid) return false;
+      if (attFilters.isPaid === 'unpaid' && att.isPaid) return false;
+    }
     return true;
   });
 
@@ -741,6 +745,10 @@ function renderAttendanceMatrix() {
     if (attFilters.workType && att.workType !== Number(attFilters.workType)) return false;
     if (attFilters.startDate && att.workDate < attFilters.startDate) return false;
     if (attFilters.endDate && att.workDate > attFilters.endDate) return false;
+    if (attFilters.isPaid) {
+      if (attFilters.isPaid === 'paid' && !att.isPaid) return false;
+      if (attFilters.isPaid === 'unpaid' && att.isPaid) return false;
+    }
     return true;
   });
 
@@ -759,7 +767,7 @@ function renderAttendanceMatrix() {
         <tr class="text-xs text-zandiTextMuted border-b border-zandiBorder/40">
           <th class="pb-2 pl-3 w-10">
             <label class="custom-checkbox">
-              <input type="checkbox" id="att-select-all-check" onclick="toggleAllAttSelects(this)">
+              <input type="checkbox" id="att-select-all-check">
               <span class="checkmark"></span>
             </label>
           </th>
@@ -823,6 +831,21 @@ function renderAttendanceMatrix() {
 
   container.innerHTML = html;
   if (window.lucide) window.lucide.createIcons();
+
+  // 체크박스 이벤트 바인딩 및 실시간 합계 초기화
+  const checkboxes = container.querySelectorAll('.att-select-check');
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', updateCheckedAttendanceStats);
+  });
+
+  const selectAllCheck = container.querySelector('#att-select-all-check');
+  if (selectAllCheck) {
+    selectAllCheck.addEventListener('change', (e) => {
+      toggleAllAttSelects(e.target);
+    });
+  }
+
+  updateCheckedAttendanceStats();
 }
 
 window.toggleAllAttSelects = function(master) {
@@ -830,7 +853,33 @@ window.toggleAllAttSelects = function(master) {
   checkboxes.forEach(cb => {
     cb.checked = master.checked;
   });
+  updateCheckedAttendanceStats();
 };
+
+function updateCheckedAttendanceStats() {
+  const checkedBoxes = document.querySelectorAll('.att-select-check:checked');
+  const count = checkedBoxes.length;
+  let days = 0;
+  let amount = 0;
+
+  checkedBoxes.forEach(cb => {
+    const att = state.attendance.find(a => a.id === cb.value);
+    if (att) {
+      days += Number(att.workType);
+      amount += (att.workType * att.dailyWage);
+    }
+  });
+
+  const countEl = document.getElementById('checked-att-count');
+  const daysEl = document.getElementById('checked-att-days');
+  const amountEl = document.getElementById('checked-att-amount');
+
+  if (countEl) countEl.textContent = count + '건';
+  if (daysEl) daysEl.textContent = days + '일';
+  if (amountEl) amountEl.textContent = amount.toLocaleString() + '원';
+}
+window.updateCheckedAttendanceStats = updateCheckedAttendanceStats;
+
 
 
 // 4.5. Land Rent View
@@ -1105,12 +1154,244 @@ window.openRentEditModal = function(id) {
   document.getElementById('rent-edit-modal').classList.remove('hidden');
 };
 
+// 4.6. 농자재 지출 관리 (Expenses)
+function renderExpenses() {
+  const expenseList = document.getElementById('expense-list');
+  if (!expenseList) return;
+
+  const expenses = state.expenses || [];
+  
+  // 날짜 내림차순 정렬
+  const sortedExpenses = [...expenses].sort((a, b) => {
+    return new Date(b.expenseDate) - new Date(a.expenseDate);
+  });
+
+  const totalCount = sortedExpenses.length;
+  const totalAmount = sortedExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+
+  const totalCountEl = document.getElementById('expense-total-count');
+  const totalAmountEl = document.getElementById('expense-total-amount');
+
+  if (totalCountEl) totalCountEl.textContent = totalCount.toLocaleString();
+  if (totalAmountEl) totalAmountEl.textContent = totalAmount.toLocaleString();
+
+  expenseList.innerHTML = '';
+  if (sortedExpenses.length === 0) {
+    expenseList.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500 text-xs">등록된 농자재 지출 내역이 없습니다.</td></tr>';
+  } else {
+    sortedExpenses.forEach(exp => {
+      const tr = document.createElement('tr');
+      tr.id = `expense-row-${exp.id}`;
+      tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20 text-xs';
+      tr.innerHTML = `
+        <td class="p-3 text-gray-300">${exp.expenseDate || '-'}</td>
+        <td class="p-3 text-white font-medium pl-2">${exp.usage || '-'}</td>
+        <td class="p-3 text-right text-emerald-400 font-bold">${Number(exp.amount || 0).toLocaleString()}원</td>
+        <td class="p-3 text-gray-400 max-w-[150px] truncate" title="${exp.notes || ''}">${exp.notes || '-'}</td>
+        <td class="p-3 text-center no-print">
+          <div class="flex items-center justify-center gap-1.5">
+            <button onclick="openExpenseEditModal('${exp.id}')" class="text-emerald-400 hover:text-emerald-300 p-1">
+              <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="deleteExpense('${exp.id}')" class="text-rose-400 hover:text-rose-300 p-1">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </td>
+      `;
+      expenseList.appendChild(tr);
+    });
+  }
+
+  if (window.lucide) window.lucide.createIcons();
+}
+
+// Expense Actions
+async function addExpense(usage, amount, notes, date) {
+  const id = 'exp-' + Date.now();
+  const newExpense = {
+    id,
+    expenseDate: date,
+    usage,
+    amount: Number(amount) || 0,
+    notes
+  };
+  state.expenses.push(newExpense);
+  saveState();
+  renderAll();
+
+  try {
+    await pushExpense(newExpense);
+    if (supabaseClient) {
+      showToast('지출 내역이 저장되었습니다.', 'success');
+    }
+  } catch (e) {
+    console.error('[addExpense] Supabase 저장 실패, 로컬 데이터는 유지됩니다:', e);
+  }
+}
+
+window.deleteExpense = async function(id) {
+  if (confirm('이 지출 내역을 삭제하시겠습니까?')) {
+    const originalExpenses = [...state.expenses];
+    state.expenses = state.expenses.filter(e => e.id !== id);
+    saveState();
+    renderAll();
+
+    try {
+      await removeExpenseSupabase(id);
+      showToast('지출 내역이 성공적으로 삭제되었습니다.');
+    } catch (e) {
+      showToast('서버 저장 실패: 삭제 처리를 롤백합니다.');
+      state.expenses = originalExpenses;
+      saveState();
+      renderAll();
+    }
+  }
+};
+
+window.openExpenseEditModal = function(id) {
+  const exp = state.expenses.find(e => e.id === id);
+  if (!exp) return;
+
+  document.getElementById('edit-expense-id').value = exp.id;
+  document.getElementById('edit-expense-date').value = exp.expenseDate || '';
+  document.getElementById('edit-expense-usage').value = exp.usage || '';
+  document.getElementById('edit-expense-amount').value = exp.amount ? Number(exp.amount).toLocaleString('ko-KR') : '';
+  document.getElementById('edit-expense-notes').value = exp.notes || '';
+
+  document.getElementById('expense-edit-modal').classList.remove('hidden');
+};
+
+window.addExpense = addExpense;
+window.renderExpenses = renderExpenses;
+
+// 4.7. 월별 인건비 지급 내역 집계
+function renderMonthlyLaborReport() {
+  const monthSelect = document.getElementById('filter-monthly-labor-month');
+  const laborList = document.getElementById('monthly-labor-list');
+  if (!monthSelect || !laborList) return;
+
+  const currentMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  const monthsSet = new Set([currentMonth]);
+  (state.attendance || []).forEach(att => {
+    if (att.workDate) {
+      monthsSet.add(att.workDate.slice(0, 7));
+    }
+  });
+
+  const sortedMonths = Array.from(monthsSet).sort().reverse();
+  const prevVal = monthSelect.value;
+  
+  const currentOptions = Array.from(monthSelect.options).map(o => o.value);
+  const isDifferent = currentOptions.length !== sortedMonths.length || currentOptions.some((v, i) => v !== sortedMonths[i]);
+  
+  if (isDifferent) {
+    monthSelect.innerHTML = '';
+    sortedMonths.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      const [year, month] = m.split('-');
+      opt.textContent = `${year}년 ${month}월`;
+      monthSelect.appendChild(opt);
+    });
+    if (prevVal && sortedMonths.includes(prevVal)) {
+      monthSelect.value = prevVal;
+    } else {
+      monthSelect.value = sortedMonths[0] || currentMonth;
+    }
+  }
+
+  const selectedMonth = monthSelect.value; // YYYY-MM
+
+  const monthlyAtts = (state.attendance || []).filter(att => att.workDate && att.workDate.startsWith(selectedMonth));
+
+  const workerAgg = {};
+  monthlyAtts.forEach(att => {
+    if (!workerAgg[att.workerId]) {
+      const worker = state.workers.find(w => w.id === att.workerId) || { name: '알수없음' };
+      workerAgg[att.workerId] = {
+        name: worker.name,
+        totalDays: 0,
+        totalWage: 0,
+        paidAmount: 0,
+        unpaidAmount: 0
+      };
+    }
+    const agg = workerAgg[att.workerId];
+    const amount = Number(att.workType) * Number(att.dailyWage);
+    agg.totalDays += Number(att.workType);
+    agg.totalWage += amount;
+    if (att.isPaid) {
+      agg.paidAmount += amount;
+    } else {
+      agg.unpaidAmount += amount;
+    }
+  });
+
+  laborList.innerHTML = '';
+  let grandDays = 0;
+  let grandWage = 0;
+  let grandPaid = 0;
+  let grandUnpaid = 0;
+
+  const aggList = Object.values(workerAgg).sort((a, b) => b.totalWage - a.totalWage);
+
+  if (aggList.length === 0) {
+    laborList.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500 text-xs">선택한 월에 해당하는 인건비 지급 내역이 없습니다.</td></tr>';
+  } else {
+    aggList.forEach(agg => {
+      grandDays += agg.totalDays;
+      grandWage += agg.totalWage;
+      grandPaid += agg.paidAmount;
+      grandUnpaid += agg.unpaidAmount;
+
+      const tr = document.createElement('tr');
+      tr.className = 'border-b border-gray-800 hover:bg-emerald-950/10 text-xs';
+      tr.innerHTML = `
+        <td class="p-3 pl-2 text-white font-medium">${agg.name}</td>
+        <td class="p-3 text-center text-gray-300">${agg.totalDays.toFixed(1)}일</td>
+        <td class="p-3 text-right text-emerald-400 font-bold">${agg.totalWage.toLocaleString()}원</td>
+        <td class="p-3 text-right text-emerald-500">${agg.paidAmount.toLocaleString()}원</td>
+        <td class="p-3 text-right text-rose-400">${agg.unpaidAmount.toLocaleString()}원</td>
+      `;
+      laborList.appendChild(tr);
+    });
+  }
+
+  const totalDaysEl = document.getElementById('monthly-labor-total-days');
+  const totalWageEl = document.getElementById('monthly-labor-total-wage');
+  const totalPaidEl = document.getElementById('monthly-labor-total-paid');
+  const totalUnpaidEl = document.getElementById('monthly-labor-total-unpaid');
+
+  if (totalDaysEl) totalDaysEl.textContent = `${grandDays.toFixed(1)}일`;
+  if (totalWageEl) totalWageEl.textContent = `${grandWage.toLocaleString()}원`;
+  if (totalPaidEl) totalPaidEl.textContent = `${grandPaid.toLocaleString()}원`;
+  if (totalUnpaidEl) totalUnpaidEl.textContent = `${grandUnpaid.toLocaleString()}원`;
+}
+
+window.renderMonthlyLaborReport = renderMonthlyLaborReport;
+
+window.openMonthlyLaborModal = function() {
+  const modal = document.getElementById('monthly-labor-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    renderMonthlyLaborReport();
+  }
+};
+
+window.closeMonthlyLaborModal = function() {
+  const modal = document.getElementById('monthly-labor-modal');
+  if (modal) modal.classList.add('hidden');
+};
+
 function renderAll() {
   renderDashboard();
   renderCustomers();
   renderSales();
   renderAttendance();
   renderRent();
+  renderExpenses();
+  renderMonthlyLaborReport();
 }
 
 // 토스트 알림 유틸리티 함수

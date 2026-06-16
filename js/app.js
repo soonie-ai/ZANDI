@@ -463,6 +463,7 @@ function initForms() {
     attFilters.workType = document.getElementById('filter-att-type').value;
     attFilters.startDate = document.getElementById('filter-att-start').value;
     attFilters.endDate = document.getElementById('filter-att-end').value;
+    attFilters.isPaid = document.getElementById('filter-att-paid').value;
     renderAttendance();
   };
 
@@ -470,6 +471,14 @@ function initForms() {
   document.getElementById('filter-att-type').addEventListener('change', applyAttFilters);
   document.getElementById('filter-att-start').addEventListener('change', applyAttFilters);
   document.getElementById('filter-att-end').addEventListener('change', applyAttFilters);
+  document.getElementById('filter-att-paid').addEventListener('change', applyAttFilters);
+
+  const monthSelect = document.getElementById('filter-monthly-labor-month');
+  if (monthSelect) {
+    monthSelect.addEventListener('change', () => {
+      renderMonthlyLaborReport();
+    });
+  }
 
   // 9.5) Attendance View Toggle & Calendar Navigation Event Listeners
   const btnViewTable = document.getElementById('btn-view-table');
@@ -713,6 +722,7 @@ function initForms() {
   attachAmountFormat('worker-half-wage');
   attachAmountFormat('modal-pay-amount');
   attachAmountFormat('debt-pay-amount');
+  attachAmountFormat('expense-amount');
 
   // 수정 폼 (수정 모달이 열릴 때 자동으로 이벤트가 걸려있도록)
   attachPhoneFormat('edit-rent-phone');
@@ -728,6 +738,7 @@ function initForms() {
   attachAmountFormat('edit-sale-price');
   attachAmountFormat('edit-worker-wage');
   attachAmountFormat('edit-worker-half-wage');
+  attachAmountFormat('edit-expense-amount');
 
   const rentSearchInput = document.getElementById('filter-rent-search');
   if (rentSearchInput) {
@@ -862,6 +873,65 @@ function initForms() {
   if (closeRentEditModalBtn) {
     closeRentEditModalBtn.addEventListener('click', () => {
       document.getElementById('rent-edit-modal').classList.add('hidden');
+    });
+  }
+
+  // 11.6) Agricultural Expenses Forms
+  const expenseForm = document.getElementById('expense-form');
+  if (expenseForm) {
+    expenseForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const date = document.getElementById('expense-date').value;
+      const usage = document.getElementById('expense-usage').value.trim();
+      const amount = document.getElementById('expense-amount').value.replace(/[^0-9]/g, '');
+      const notes = document.getElementById('expense-notes').value.trim();
+
+      await addExpense(usage, amount, notes, date);
+
+      expenseForm.reset();
+      document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+    });
+  }
+
+  const editExpenseForm = document.getElementById('edit-expense-form');
+  if (editExpenseForm) {
+    editExpenseForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('edit-expense-id').value;
+      const exp = state.expenses.find(x => x.id === id);
+      if (!exp) return;
+
+      exp.expenseDate = document.getElementById('edit-expense-date').value;
+      exp.usage = document.getElementById('edit-expense-usage').value.trim();
+      exp.amount = Number(document.getElementById('edit-expense-amount').value.replace(/[^0-9]/g, '')) || 0;
+      exp.notes = document.getElementById('edit-expense-notes').value.trim();
+
+      saveState();
+      renderAll();
+      document.getElementById('expense-edit-modal').classList.add('hidden');
+
+      try {
+        await pushExpense(exp);
+        if (supabaseClient) {
+          showToast('지출 내역이 수정되었습니다.', 'success');
+        }
+      } catch (err) {
+        console.error('[editExpenseForm] Supabase 수정 실패, 로컬 데이터는 유지됩니다:', err);
+      }
+    });
+  }
+
+  const closeExpenseEditModalBtn = document.getElementById('close-expense-edit-modal-btn');
+  if (closeExpenseEditModalBtn) {
+    closeExpenseEditModalBtn.addEventListener('click', () => {
+      document.getElementById('expense-edit-modal').classList.add('hidden');
+    });
+  }
+
+  const closeMonthlyLaborModalBtn = document.getElementById('close-monthly-labor-modal-btn');
+  if (closeMonthlyLaborModalBtn) {
+    closeMonthlyLaborModalBtn.addEventListener('click', () => {
+      closeMonthlyLaborModal();
     });
   }
 
@@ -1059,6 +1129,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const todayStr = new Date().toISOString().split('T')[0];
   document.getElementById('sale-date').value = todayStr;
   document.getElementById('att-date').value = todayStr;
+  document.getElementById('expense-date').value = todayStr;
 
   initForms();
   initRentYears();

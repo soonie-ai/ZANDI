@@ -56,6 +56,11 @@ const INITIAL_RENTS = [
   { id: 'rent-2', ownerName: '이몽룡', phone: '010-3333-4444', address: '송정리 송정길 12 농지', area: 300, amount: 800000, bankAccount: '신한 110-987-654321', yearlyPayments: { '2025': true, '2026': false }, paymentDate: '', notes: '도지세 잔여분 80만원 미납' }
 ];
 
+const INITIAL_EXPENSES = [
+  { id: 'exp-1', expenseDate: '2026-06-12', usage: '농협 복합비료 10포대', amount: 150000, notes: '평리 밭 비료 살포용' },
+  { id: 'exp-2', expenseDate: '2026-06-14', usage: '송정농약사 제초제', amount: 85000, notes: '송정리 밭 잡초 제거' }
+];
+
 // App Data State
 let state = {
   customers: [],
@@ -63,6 +68,7 @@ let state = {
   workers: [],
   attendance: [],
   rents: [],
+  expenses: [],
   isAuthenticated: false
 };
 
@@ -78,7 +84,8 @@ let attFilters = {
   workerId: '',
   workType: '',
   startDate: '',
-  endDate: ''
+  endDate: '',
+  isPaid: ''
 };
 
 let rentFilters = {
@@ -115,6 +122,9 @@ function loadState() {
     if (!state.rents) {
       state.rents = INITIAL_RENTS;
     }
+    if (!state.expenses) {
+      state.expenses = INITIAL_EXPENSES;
+    }
     if (state.customers) {
       const localSortOrder = localStorage.getItem('customer_sort_order');
       if (localSortOrder) {
@@ -137,6 +147,7 @@ function loadState() {
     state.workers = INITIAL_WORKERS;
     state.attendance = INITIAL_ATTENDANCE;
     state.rents = INITIAL_RENTS;
+    state.expenses = INITIAL_EXPENSES;
     saveState();
   }
   
@@ -160,6 +171,7 @@ function saveState() {
     sales: state.sales,
     workers: state.workers,
     attendance: state.attendance,
-    rents: state.rents
+    rents: state.rents,
+    expenses: state.expenses
   }));
 }

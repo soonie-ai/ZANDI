@@ -154,6 +154,15 @@ async function pullFromSupabase() {
       console.warn("Supabase rents table pull failed (might not exist yet):", e);
     }
 
+    // expenses 테이블 풀 시도 (테이블이 없을 수 있으므로 try-catch로 예외 처리)
+    let exp = [];
+    try {
+      const { data: expData, error: eErr } = await supabaseClient.from('expenses').select('*');
+      if (!eErr && expData) exp = expData;
+    } catch (e) {
+      console.warn("Supabase expenses table pull failed (might not exist yet):", e);
+    }
+
     // settings 테이블 풀 시도 (테이블이 없을 수 있으므로 try-catch로 예외 처리)
     let customerSortOrder = localStorage.getItem('customer_sort_order') || null;
     try {
@@ -267,7 +276,16 @@ async function pullFromSupabase() {
           }
         }
         console.log('[AutoSync] 초기 업로드 완료!');
-      }
+    }
+
+    if (exp && exp.length > 0) {
+      state.expenses = exp.map(e => ({
+        id: e.id,
+        expenseDate: e.expense_date || e.expenseDate || '',
+        usage: e.usage || '',
+        amount: Number(e.amount) || 0,
+        notes: e.notes || ''
+      }));
     }
 
     saveState();
@@ -457,3 +475,38 @@ async function pushSetting(key, value) {
     throw e;
   }
 }
+
+async function pushExpense(expense) {
+  if (!supabaseClient) return;
+  try {
+    const { error } = await supabaseClient.from('expenses').upsert({
+      id: expense.id,
+      expense_date: expense.expenseDate,
+      usage: expense.usage,
+      amount: expense.amount,
+      notes: expense.notes
+    });
+    if (error) {
+      console.warn('[pushExpense] Supabase 지출 저장 오류 (테이블이 없을 수 있음):', error);
+      throw error;
+    }
+  } catch (e) {
+    console.error('[pushExpense] 예외 발생:', e);
+    throw e;
+  }
+}
+
+async function removeExpenseSupabase(id) {
+  if (!supabaseClient) return;
+  try {
+    const { error } = await supabaseClient.from('expenses').delete().eq('id', id);
+    if (error) {
+      console.error('[removeExpenseSupabase] Supabase 지출 삭제 오류:', error);
+      throw error;
+    }
+  } catch (e) {
+    console.error('[removeExpenseSupabase] 예외 발생:', e);
+    throw e;
+  }
+}
+
