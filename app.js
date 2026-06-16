@@ -120,6 +120,22 @@ function loadState() {
     if (!state.rents) {
       state.rents = INITIAL_RENTS;
     }
+    if (state.customers) {
+      const localSortOrder = localStorage.getItem('customer_sort_order');
+      if (localSortOrder) {
+        const orderArray = localSortOrder.split(',');
+        state.customers.sort((a, b) => {
+          const idxA = orderArray.indexOf(a.id);
+          const idxB = orderArray.indexOf(b.id);
+          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+          if (idxA !== -1) return -1;
+          if (idxB !== -1) return 1;
+          return (a.sortOrder || 0) - (b.sortOrder || 0);
+        });
+      } else {
+        state.customers.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      }
+    }
   } else {
     state.customers = INITIAL_CUSTOMERS;
     state.sales = INITIAL_SALES;
@@ -233,6 +249,7 @@ async function pullFromSupabase() {
     }
 
     // settings 테이블 풀 시도 (테이블이 없을 수 있으므로 try-catch로 예외 처리)
+    let customerSortOrder = null;
     try {
       const { data: settingsData, error: setErr } = await supabaseClient.from('settings').select('*');
       if (!setErr && settingsData) {
@@ -242,6 +259,10 @@ async function pullFromSupabase() {
             rentVillageNames[vKey] = s.value;
             localStorage.setItem(s.key, s.value);
           }
+          if (s.key === 'customer_sort_order') {
+            customerSortOrder = s.value;
+            localStorage.setItem('customer_sort_order', s.value);
+          }
         });
       }
     } catch (e) {
@@ -249,7 +270,24 @@ async function pullFromSupabase() {
     }
 
     state.customers = cust.map(c => ({ id: c.id, name: c.name, phone: c.phone, prices: c.prices, initialDebt: c.initial_debt || 0, initialDebtCollected: c.initial_debt_collected || 0, sortOrder: c.sort_order || 0 }));
-    state.customers.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    
+    if (customerSortOrder) {
+      const orderArray = customerSortOrder.split(',');
+      state.customers.sort((a, b) => {
+        const idxA = orderArray.indexOf(a.id);
+        const idxB = orderArray.indexOf(b.id);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return (a.sortOrder || 0) - (b.sortOrder || 0);
+      });
+      // 메모리 객체에도 정렬 순서 인덱스를 동기화해둠
+      state.customers.forEach((c, i) => {
+        c.sortOrder = i + 1;
+      });
+    } else {
+      state.customers.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    }
     state.sales = sal.map(s => ({ 
       id: s.id, 
       customerId: s.customer_id, 
@@ -2719,7 +2757,15 @@ function initForms() {
       };
 
       saveState();
-      await pushCustomers(customer);
+      try {
+        await pushCustomers(customer);
+        if (supabaseClient) {
+          showToast('거래처 정보가 수정되었습니다.', 'success');
+        }
+      } catch (err) {
+        console.error('[editCustForm] Supabase 저장 실패, 로컬 데이터는 유지됩니다:', err);
+        showToast('서버 저장 실패: 데이터베이스 권한 또는 컬럼 오류 (로컬에 임시 보존됨)', 'warning');
+      }
       renderAll();
       document.getElementById('customer-edit-modal').classList.add('hidden');
     });
@@ -3192,8 +3238,18 @@ window.saveCustomerOrdering = async function() {
   }
 
   try {
-    // 최종 상태 전체를 서버에 단 한번만 일괄 전송 (경쟁 상태 완벽 해결)
-    await pushCustomers(state.customers);
+    // 1) customers 테이블의 sort_order 컬럼 업데이트 시도 (컬럼이 없을 수 있으므로 예외 분리)
+    try {
+      await pushCustomers(state.customers);
+    } catch (err) {
+      console.warn("[saveCustomerOrdering] customers 테이블 sort_order 저장 실패 (컬럼이 없을 수 있음):", err);
+    }
+
+    // 2) settings 테이블에 customer_sort_order 키로 순서 리스트 저장
+    const sortedIds = state.customers.map(c => c.id).join(',');
+    await pushSetting('customer_sort_order', sortedIds);
+    localStorage.setItem('customer_sort_order', sortedIds);
+
     saveState();
     showToast('거래처 정렬 순서가 서버에 안전하게 영구 저장되었습니다.', 'success');
   } catch (err) {
