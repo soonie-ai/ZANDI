@@ -1105,6 +1105,31 @@ function initForms() {
       }
     });
   }
+
+  // 인부출근대장 일별 상세 모달 닫기 리스너
+  const attDetailsModal = document.getElementById('attendance-day-details-modal');
+  const closeAttModalBtn = document.getElementById('close-attendance-modal-btn');
+  const btnCloseAttModal = document.getElementById('btn-close-attendance-modal');
+
+  if (closeAttModalBtn && attDetailsModal) {
+    closeAttModalBtn.addEventListener('click', () => {
+      attDetailsModal.classList.add('hidden');
+    });
+  }
+
+  if (btnCloseAttModal && attDetailsModal) {
+    btnCloseAttModal.addEventListener('click', () => {
+      attDetailsModal.classList.add('hidden');
+    });
+  }
+
+  if (attDetailsModal) {
+    attDetailsModal.addEventListener('click', (e) => {
+      if (e.target === attDetailsModal) {
+        attDetailsModal.classList.add('hidden');
+      }
+    });
+  }
 }
 
 // 6. Application Launch Entry Point

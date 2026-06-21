@@ -4,7 +4,19 @@ function renderDashboard() {
     const collected = (item.payments || []).reduce((s, p) => s + p.amount, 0);
     return sum + collected;
   }, 0);
-  const uncollectedSales = totalSales - collectedSales;
+  
+  // 거래처별 전체 미수금의 합 (거래 내역 미수금 + 이월 미수금 잔액)
+  const uncollectedSales = state.customers.reduce((sum, customer) => {
+    const cSales = state.sales.filter(s => s.customerId === customer.id);
+    const total = cSales.reduce((s, item) => s + (item.quantity * item.price), 0);
+    const paid = cSales.reduce((s, item) => s + (item.payments || []).reduce((sm, p) => sm + p.amount, 0), 0);
+    
+    const initialDebtVal = customer.initialDebt || 0;
+    const initialCollectedVal = customer.initialDebtCollected || 0;
+    const initialUncollected = Math.max(0, initialDebtVal - initialCollectedVal);
+    
+    return sum + (total - paid) + initialUncollected;
+  }, 0);
 
   const totalLabor = state.attendance.reduce((sum, item) => sum + (item.workType * item.dailyWage), 0);
   const paidLabor = state.attendance.filter(a => a.isPaid).reduce((sum, item) => sum + (item.workType * item.dailyWage), 0);
@@ -143,6 +155,43 @@ window.openDashDayDetailsModal = function(dateStr) {
   modal.classList.remove('hidden');
 };
 
+window.openAttendanceDayDetailsModal = function(dateStr) {
+  const modal = document.getElementById('attendance-day-details-modal');
+  if (!modal) return;
+
+  document.getElementById('attendance-modal-date-title').textContent = dateStr;
+  const list = document.getElementById('attendance-modal-list');
+  list.innerHTML = '';
+
+  const dayAttendance = state.attendance.filter(a => a.workDate === dateStr);
+
+  if (dayAttendance.length === 0) {
+    list.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500 text-xs">해당 날짜의 출근 내역이 없습니다.</td></tr>';
+  } else {
+    dayAttendance.forEach(att => {
+      const worker = state.workers.find(w => w.id === att.workerId) || { name: '삭제된 인부' };
+      const payment = att.workType * att.dailyWage;
+
+      const tr = document.createElement('tr');
+      tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
+      tr.innerHTML = `
+        <td class="p-2 text-white font-medium">${worker.name}</td>
+        <td class="p-2 text-center text-gray-300">${att.workType === 1.0 ? '하루(1.0)' : '반나절(0.5)'}</td>
+        <td class="p-2 text-right text-gray-400">${att.dailyWage.toLocaleString()}원</td>
+        <td class="p-2 text-right text-emerald-400 font-bold">${payment.toLocaleString()}원</td>
+        <td class="p-2 text-center">
+          <span class="px-2 py-0.5 rounded text-[10px] ${att.isPaid ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'}">
+            ${att.isPaid ? '지급완료' : '미지급'}
+          </span>
+        </td>
+      `;
+      list.appendChild(tr);
+    });
+  }
+
+  modal.classList.remove('hidden');
+};
+
 // Dashboard Unpaid Customers List Rendering
 function renderUnpaidCustomers() {
   const list = document.getElementById('unpaid-customers-list');
@@ -152,7 +201,11 @@ function renderUnpaidCustomers() {
     const cSales = state.sales.filter(s => s.customerId === customer.id);
     const total = cSales.reduce((sum, s) => sum + (s.quantity * s.price), 0);
     const paid = cSales.reduce((sum, s) => sum + (s.payments || []).reduce((sm, p) => sm + p.amount, 0), 0);
-    const unpaid = total - paid;
+    
+    const initialDebtVal = customer.initialDebt || 0;
+    const initialCollectedVal = customer.initialDebtCollected || 0;
+    const initialUncollected = Math.max(0, initialDebtVal - initialCollectedVal);
+    const unpaid = (total - paid) + initialUncollected;
 
     if (unpaid > 0) {
       const tr = document.createElement('tr');
@@ -695,7 +748,8 @@ function renderAttendanceCalendar() {
     });
 
     const cell = document.createElement('div');
-    cell.className = `calendar-day-cell ${isToday ? 'today' : ''}`;
+    cell.className = `calendar-day-cell cursor-pointer ${isToday ? 'today' : ''}`;
+    cell.onclick = () => openAttendanceDayDetailsModal(dateStr);
     
     let dayNumClass = 'text-[11px] font-bold text-gray-400 mb-1';
     const cellDate = new Date(calendarYear, calendarMonth, day);

@@ -1454,6 +1454,41 @@
     </div>
   </div>
 
+  <!-- 6.5. 인부출근대장 일별 출근 내역 상세 모달 -->
+  <div id="attendance-day-details-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden">
+    <div class="glass-panel p-6 max-w-xl w-full mx-4 border border-zandiBorder">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i data-lucide="users" class="text-emerald-400"></i> <span id="attendance-modal-date-title">2026-06-15</span> 출근 현황 상세
+        </h3>
+        <button id="close-attendance-modal-btn" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
+          <table class="w-full text-left text-xs min-w-[450px]">
+            <thead>
+              <tr class="text-zandiTextMuted border-b border-zandiBorder/40">
+                <th class="pb-2">인부명</th>
+                <th class="pb-2 text-center">근무형태</th>
+                <th class="pb-2 text-right">기준일당</th>
+                <th class="pb-2 text-right">정산금액</th>
+                <th class="pb-2 text-center">지급여부</th>
+              </tr>
+            </thead>
+            <tbody id="attendance-modal-list">
+              <!-- JS dynamically populates -->
+            </tbody>
+          </table>
+        </div>
+        <div class="flex justify-end pt-2 border-t border-zandiBorder/20">
+          <button type="button" id="btn-close-attendance-modal" class="btn-secondary text-xs py-2">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 7. 토지 임대료 수정 모달 -->
   <div id="rent-edit-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden">
     <div class="glass-panel p-6 max-w-md w-full mx-4 border border-zandiBorder">
