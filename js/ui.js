@@ -2195,9 +2195,8 @@ window.openStatementModal = function() {
     tbody.appendChild(tr);
   }
 
-  // 합계 업데이트
-  document.getElementById('stmt-total-qty').textContent = `${totalQty.toLocaleString()} 장/평`;
-  document.getElementById('stmt-total-amount').textContent = `${totalAmount.toLocaleString()}원`;
+  // 테이블 내 데이터를 기반으로 합계 및 규격별 수량 자동 계산 실행
+  recalculateStatement();
 
   if (window.lucide) window.lucide.createIcons();
 
