@@ -2119,6 +2119,15 @@ window.openStatementModal = function() {
   // 날짜 오름차순 정렬 (명세서는 과거부터 순서대로 보여주는 것이 일반적)
   salesData.sort((a, b) => new Date(a.saleDate) - new Date(b.saleDate));
 
+  // 캡처용 삭제 버튼 숨기기 토글 상태 리셋
+  const toggleCheckbox = document.getElementById('stmt-toggle-delete');
+  if (toggleCheckbox) {
+    toggleCheckbox.checked = false;
+  }
+  setTimeout(() => {
+    toggleStatementDeleteColumn(false);
+  }, 0);
+
   // 모달 데이터 셋업
   document.getElementById('stmt-customer-name').textContent = `${customer.name} 귀하`;
   
@@ -2269,6 +2278,20 @@ window.recalculateStatement = function() {
 
 window.printStatement = function() {
   window.print();
+};
+
+window.toggleStatementDeleteColumn = function(hide) {
+  const table = document.getElementById('statement-table');
+  if (!table) return;
+
+  const noPrintCols = table.querySelectorAll('.no-print');
+  noPrintCols.forEach(col => {
+    if (hide) {
+      col.style.setProperty('display', 'none', 'important');
+    } else {
+      col.style.removeProperty('display');
+    }
+  });
 };
 
 

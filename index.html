@@ -1682,7 +1682,13 @@
         <h3 class="text-base font-bold text-white flex items-center gap-2">
           <i data-lucide="file-text" class="text-zandiPrimary"></i> 거래명세서 발행 및 편집
         </h3>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
+          <!-- 삭제 버튼 숨기기 토글 -->
+          <label class="custom-checkbox inline-flex items-center text-xs text-slate-300">
+            <input type="checkbox" id="stmt-toggle-delete" onchange="toggleStatementDeleteColumn(this.checked)">
+            <span class="checkmark"></span>
+            <span class="text-xs">삭제 버튼 숨기기 (캡처용)</span>
+          </label>
           <button onclick="addStatementRow()" class="px-3 py-1.5 text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded hover:bg-emerald-500/20 font-semibold flex items-center gap-1">
             <i data-lucide="plus" class="w-3.5 h-3.5"></i> 수기 항목 추가
           </button>
