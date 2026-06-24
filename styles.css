@@ -764,6 +764,107 @@ input, select, textarea {
   border-top: 2px solid var(--primary) !important;
 }
 
+/* =============================================
+   📄 거래명세서 (Statement) 스타일링
+   ============================================= */
+#statement-print-content {
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: 'Noto Sans KR', sans-serif;
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  border: 2px solid #000000;
+  line-height: 1.4;
+}
+
+#statement-print-content [contenteditable="true"] {
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  outline: none;
+}
+
+#statement-print-content [contenteditable="true"]:hover {
+  background-color: rgba(46, 204, 113, 0.1);
+  cursor: pointer;
+}
+
+#statement-print-content [contenteditable="true"]:focus {
+  background-color: rgba(46, 204, 113, 0.15);
+  border-bottom: 1.5px dashed var(--primary);
+}
+
+/* 명세서 테이블 흑백 테두리 고정 */
+#statement-table {
+  border: 2px solid #000000 !important;
+}
+#statement-table th, #statement-table td {
+  border: 1px solid #000000 !important;
+  color: #000000 !important;
+}
+
+/* =============================================
+   🖨️ 거래명세서 전용 프린트 미디어 쿼리
+   ============================================= */
+@media print {
+  /* 거래명세서 모달이 보일 때만 이 인쇄 전용 규칙을 강제 적용 */
+  body:has(#statement-modal:not(.hidden)) {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  body:has(#statement-modal:not(.hidden)) #main-app,
+  body:has(#statement-modal:not(.hidden)) .no-print,
+  body:has(#statement-modal:not(.hidden)) aside,
+  body:has(#statement-modal:not(.hidden)) header,
+  body:has(#statement-modal:not(.hidden)) #sidebar-actions-container,
+  body:has(#statement-modal:not(.hidden)) #sidebar-settings-btn,
+  body:has(#statement-modal:not(.hidden)) #sync-indicator,
+  body:has(#statement-modal:not(.hidden)) #statement-modal-panel > .no-print,
+  body:has(#statement-modal:not(.hidden)) #statement-modal-panel > div.no-print,
+  body:has(#statement-modal:not(.hidden)) button {
+    display: none !important;
+  }
+
+  body:has(#statement-modal:not(.hidden)) #statement-modal {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    background: #ffffff !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  body:has(#statement-modal:not(.hidden)) #statement-modal-panel {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    overflow: visible !important;
+  }
+
+  body:has(#statement-modal:not(.hidden)) #statement-print-content {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* 인쇄 시 contenteditable 아웃라인 제거 */
+  #statement-print-content [contenteditable="true"] {
+    background: transparent !important;
+    border-bottom: none !important;
+  }
+}
+
 
 
 

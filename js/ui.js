@@ -91,8 +91,7 @@ function renderDashCalendar() {
       html += `<div class="flex flex-col gap-1 w-full mt-1 max-h-[60px] overflow-y-auto pr-0.5">`;
       daySales.forEach(sale => {
         const customer = state.customers.find(c => c.id === sale.customerId) || { name: '알수없음' };
-        const unitLabel = (sale.productType === '1818t' || sale.productType === '3030t') ? 't' : 
-                          (sale.productType === '1818' || sale.productType === '3030' || sale.productType === '4060') ? '장' : '평';
+        const unitLabel = (sale.productType === '1818' || sale.productType === '1818t' || sale.productType === '3030' || sale.productType === '3030t' || sale.productType === '4060') ? '장' : '평';
         
         html += `
           <div class="px-1 py-0.5 rounded text-[9px] font-semibold bg-emerald-950/40 text-emerald-400 border border-emerald-500/20 truncate" title="${customer.name}: ${sale.quantity}${unitLabel}">
@@ -134,8 +133,7 @@ window.openDashDayDetailsModal = function(dateStr) {
     daySales.forEach(sale => {
       const customer = state.customers.find(c => c.id === sale.customerId) || { name: '삭제된 거래처' };
       const total = sale.quantity * sale.price;
-      const unitLabel = (sale.productType === '1818t' || sale.productType === '3030t') ? '톤' : 
-                        (sale.productType === '1818' || sale.productType === '3030' || sale.productType === '4060') ? '장' : '평';
+      const unitLabel = (sale.productType === '1818' || sale.productType === '1818t' || sale.productType === '3030' || sale.productType === '3030t' || sale.productType === '4060') ? '장' : '평';
 
       const tr = document.createElement('tr');
       tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
@@ -440,8 +438,7 @@ function renderSales() {
   filteredSales.sort((a,b) => new Date(b.saleDate) - new Date(a.saleDate)).forEach(sale => {
     const customer = state.customers.find(c => c.id === sale.customerId) || { name: '삭제된 거래처' };
     const total = sale.quantity * sale.price;
-    const unitLabel = (sale.productType === '1818t' || sale.productType === '3030t') ? '톤' : 
-                      (sale.productType === '1818' || sale.productType === '3030' || sale.productType === '4060') ? '장' : '평';
+    const unitLabel = (sale.productType === '1818' || sale.productType === '1818t' || sale.productType === '3030' || sale.productType === '3030t' || sale.productType === '4060') ? '장' : '평';
 
     const collected = (sale.payments || []).reduce((sum, p) => sum + p.amount, 0);
     const uncollected = total - collected;
@@ -2090,6 +2087,168 @@ window.bulkPayAttendance = async function() {
   // 마스터 체크박스 해제
   const masterCheck = document.getElementById('att-select-all-check');
   if (masterCheck) masterCheck.checked = false;
+};
+
+// ============================================================
+//  📄 거래명세서 (Statement) 관리 함수
+// ============================================================
+window.openStatementModal = function() {
+  const custId = document.getElementById('filter-sale-customer').value;
+  if (!custId) {
+    alert('거래명세서를 발행할 특정 거래처를 먼저 선택해 주세요.');
+    return;
+  }
+
+  const customer = state.customers.find(c => c.id === custId);
+  if (!customer) {
+    alert('존재하지 않는 거래처입니다.');
+    return;
+  }
+
+  const startDate = document.getElementById('filter-sale-start').value;
+  const endDate = document.getElementById('filter-sale-end').value;
+
+  // 필터링된 매출 내역 가져오기
+  let salesData = state.sales.filter(sale => {
+    if (sale.customerId !== custId) return false;
+    if (startDate && sale.saleDate < startDate) return false;
+    if (endDate && sale.saleDate > endDate) return false;
+    return true;
+  });
+
+  // 날짜 오름차순 정렬 (명세서는 과거부터 순서대로 보여주는 것이 일반적)
+  salesData.sort((a, b) => new Date(a.saleDate) - new Date(b.saleDate));
+
+  // 모달 데이터 셋업
+  document.getElementById('stmt-customer-name').textContent = `${customer.name} 귀하`;
+  
+  // 발행일자 세팅 (오늘 날짜)
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('stmt-issue-date').textContent = today;
+
+  // 공급자 정보 기본값 세팅
+  document.getElementById('stmt-supplier-owner').textContent = 'moonie / soonie';
+
+  const tbody = document.getElementById('statement-items-body');
+  tbody.innerHTML = '';
+
+  let totalQty = 0;
+  let totalAmount = 0;
+
+  salesData.forEach(sale => {
+    const total = sale.quantity * sale.price;
+    totalQty += sale.quantity;
+    totalAmount += total;
+
+    // 날짜 포맷 (MM/DD 형태)
+    const dateObj = new Date(sale.saleDate);
+    const dateStr = `${String(dateObj.getMonth() + 1).padStart(2, '0')}/${String(dateObj.getDate()).padStart(2, '0')}`;
+    const prodName = PRODUCT_TYPE_LABELS[sale.productType] || '잔디';
+
+    const tr = document.createElement('tr');
+    tr.className = 'border-b border-black';
+    tr.innerHTML = `
+      <td class="border-r border-black p-1.5" contenteditable="true">${dateStr}</td>
+      <td class="border-r border-black p-1.5 text-left" contenteditable="true">${prodName}</td>
+      <td class="border-r border-black p-1.5 text-right font-semibold" contenteditable="true" oninput="recalculateStatement()">${sale.quantity.toLocaleString()}</td>
+      <td class="border-r border-black p-1.5 text-right" contenteditable="true" oninput="recalculateStatement()">${sale.price.toLocaleString()}</td>
+      <td class="border-r border-black p-1.5 text-right font-bold stmt-row-total">${total.toLocaleString()}원</td>
+      <td class="border-r border-black p-1.5 text-left" contenteditable="true">${sale.notes || ''}</td>
+      <td class="p-1.5 no-print">
+        <button onclick="deleteStatementRow(this)" class="text-rose-600 hover:text-rose-800 font-bold">X</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  if (salesData.length === 0) {
+    const tr = document.createElement('tr');
+    tr.id = 'stmt-empty-row';
+    tr.innerHTML = `<td colspan="7" class="p-4 text-center text-gray-400">해당 기간의 거래 내역이 없습니다. [+ 수기 항목 추가]를 통해 직접 항목을 채워주세요.</td>`;
+    tbody.appendChild(tr);
+  }
+
+  // 합계 업데이트
+  document.getElementById('stmt-total-qty').textContent = `${totalQty.toLocaleString()} 장/평`;
+  document.getElementById('stmt-total-amount').textContent = `${totalAmount.toLocaleString()}원`;
+
+  if (window.lucide) window.lucide.createIcons();
+
+  // 모달 보이기
+  document.getElementById('statement-modal').classList.remove('hidden');
+};
+
+window.closeStatementModal = function() {
+  document.getElementById('statement-modal').classList.add('hidden');
+};
+
+window.addStatementRow = function() {
+  const tbody = document.getElementById('statement-items-body');
+  
+  // 비어있음 행 제거
+  const emptyRow = document.getElementById('stmt-empty-row');
+  if (emptyRow) emptyRow.remove();
+
+  const tr = document.createElement('tr');
+  tr.className = 'border-b border-black';
+  tr.innerHTML = `
+    <td class="border-r border-black p-1.5" contenteditable="true"></td>
+    <td class="border-r border-black p-1.5 text-left" contenteditable="true">새 항목</td>
+    <td class="border-r border-black p-1.5 text-right font-semibold" contenteditable="true" oninput="recalculateStatement()">0</td>
+    <td class="border-r border-black p-1.5 text-right" contenteditable="true" oninput="recalculateStatement()">0</td>
+    <td class="border-r border-black p-1.5 text-right font-bold stmt-row-total">0원</td>
+    <td class="border-r border-black p-1.5 text-left" contenteditable="true"></td>
+    <td class="p-1.5 no-print">
+      <button onclick="deleteStatementRow(this)" class="text-rose-600 hover:text-rose-800 font-bold">X</button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+  recalculateStatement();
+};
+
+window.deleteStatementRow = function(btn) {
+  const row = btn.closest('tr');
+  row.remove();
+  recalculateStatement();
+
+  const tbody = document.getElementById('statement-items-body');
+  if (tbody.children.length === 0) {
+    const tr = document.createElement('tr');
+    tr.id = 'stmt-empty-row';
+    tr.innerHTML = `<td colspan="7" class="p-4 text-center text-gray-400">해당 기간의 거래 내역이 없습니다. [+ 수기 항목 추가]를 통해 직접 항목을 채워주세요.</td>`;
+    tbody.appendChild(tr);
+  }
+};
+
+window.recalculateStatement = function() {
+  const tbody = document.getElementById('statement-items-body');
+  const rows = tbody.querySelectorAll('tr:not(#stmt-empty-row)');
+  
+  let totalQty = 0;
+  let totalAmount = 0;
+
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    const qtyStr = cells[2].textContent.replace(/[^0-9]/g, '');
+    const priceStr = cells[3].textContent.replace(/[^0-9]/g, '');
+
+    const qty = Number(qtyStr) || 0;
+    const price = Number(priceStr) || 0;
+    const rowTotal = qty * price;
+
+    totalQty += qty;
+    totalAmount += rowTotal;
+
+    // 개별 행 총액 업데이트
+    cells[4].textContent = `${rowTotal.toLocaleString()}원`;
+  });
+
+  document.getElementById('stmt-total-qty').textContent = `${totalQty.toLocaleString()} 장/평`;
+  document.getElementById('stmt-total-amount').textContent = `${totalAmount.toLocaleString()}원`;
+};
+
+window.printStatement = function() {
+  window.print();
 };
 
 
