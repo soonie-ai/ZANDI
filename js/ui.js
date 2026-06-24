@@ -2127,7 +2127,11 @@ window.openStatementModal = function() {
       if (sale.customerId !== custId) return false;
       if (startDate && sale.saleDate < startDate) return false;
       if (endDate && sale.saleDate > endDate) return false;
-      return true;
+      
+      // 오직 미수금 상태(완납되지 않은 건)의 거래 건만 자동 수집하여 발행
+      const total = sale.quantity * sale.price;
+      const collected = (sale.payments || []).reduce((sum, p) => sum + p.amount, 0);
+      return (total - collected) > 0;
     });
   }
 
