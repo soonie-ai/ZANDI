@@ -864,8 +864,36 @@ input, select, textarea {
     border-bottom: none !important;
   }
 }
+/* =============================================
+   🔔 최근 변경 사항 알림 피드 및 통합 탭 스타일
+   ============================================= */
+.tab-btn-active {
+  color: var(--text-primary) !important;
+  border-color: var(--primary) !important;
+}
 
+.tab-btn-inactive {
+  color: var(--text-secondary) !important;
+  border-color: transparent !important;
+}
 
+#unread-notification-count {
+  box-shadow: 0 0 8px var(--danger-glow);
+}
 
+.notification-item-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(46, 204, 113, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: var(--transition-smooth);
+}
 
+.notification-item-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(46, 204, 113, 0.2);
+}
 
+.notification-item-card.unread {
+  border-left: 3px solid var(--warning);
+}

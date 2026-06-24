@@ -69,6 +69,7 @@ let state = {
   attendance: [],
   rents: [],
   expenses: [],
+  recent_activities: [],
   isAuthenticated: false
 };
 
@@ -125,6 +126,9 @@ function loadState() {
     if (!state.expenses) {
       state.expenses = INITIAL_EXPENSES;
     }
+    if (!state.recent_activities) {
+      state.recent_activities = [];
+    }
     if (state.customers) {
       const localSortOrder = localStorage.getItem('customer_sort_order');
       if (localSortOrder) {
@@ -148,6 +152,7 @@ function loadState() {
     state.attendance = INITIAL_ATTENDANCE;
     state.rents = INITIAL_RENTS;
     state.expenses = INITIAL_EXPENSES;
+    state.recent_activities = [];
     saveState();
   }
   
@@ -172,6 +177,7 @@ function saveState() {
     workers: state.workers,
     attendance: state.attendance,
     rents: state.rents,
-    expenses: state.expenses
+    expenses: state.expenses,
+    recent_activities: state.recent_activities
   }));
 }

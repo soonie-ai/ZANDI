@@ -122,13 +122,14 @@ window.openDashDayDetailsModal = function(dateStr) {
   if (!modal) return;
 
   document.getElementById('dash-modal-date-title').textContent = dateStr;
-  const list = document.getElementById('dash-modal-sales-list');
-  list.innerHTML = '';
-
+  
+  // 1) 판매 내역 렌더링
+  const salesList = document.getElementById('dash-modal-sales-list');
+  salesList.innerHTML = '';
   const daySales = state.sales.filter(s => s.saleDate === dateStr);
 
   if (daySales.length === 0) {
-    list.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500 text-xs">해당 날짜의 잔디 출하 내역이 없습니다.</td></tr>';
+    salesList.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500 text-xs">해당 날짜의 잔디 출하 내역이 없습니다.</td></tr>';
   } else {
     daySales.forEach(sale => {
       const customer = state.customers.find(c => c.id === sale.customerId) || { name: '삭제된 거래처' };
@@ -145,26 +146,17 @@ window.openDashDayDetailsModal = function(dateStr) {
         <td class="p-2 text-right text-emerald-400 font-bold">${total.toLocaleString()}원</td>
         <td class="p-2 text-gray-400">${sale.notes || '-'}</td>
       `;
-      list.appendChild(tr);
+      salesList.appendChild(tr);
     });
   }
 
-  if (window.lucide) window.lucide.createIcons();
-  modal.classList.remove('hidden');
-};
-
-window.openAttendanceDayDetailsModal = function(dateStr) {
-  const modal = document.getElementById('attendance-day-details-modal');
-  if (!modal) return;
-
-  document.getElementById('attendance-modal-date-title').textContent = dateStr;
-  const list = document.getElementById('attendance-modal-list');
-  list.innerHTML = '';
-
+  // 2) 인부 출근 내역 렌더링
+  const attendanceList = document.getElementById('attendance-modal-list');
+  attendanceList.innerHTML = '';
   const dayAttendance = state.attendance.filter(a => a.workDate === dateStr);
 
   if (dayAttendance.length === 0) {
-    list.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500 text-xs">해당 날짜의 출근 내역이 없습니다.</td></tr>';
+    attendanceList.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500 text-xs">해당 날짜의 출근 내역이 없습니다.</td></tr>';
   } else {
     dayAttendance.forEach(att => {
       const worker = state.workers.find(w => w.id === att.workerId) || { name: '삭제된 인부' };
@@ -183,11 +175,43 @@ window.openAttendanceDayDetailsModal = function(dateStr) {
           </span>
         </td>
       `;
-      list.appendChild(tr);
+      attendanceList.appendChild(tr);
     });
   }
 
+  if (window.lucide) window.lucide.createIcons();
+
+  // 기본적으로 'sales' (판매 내역) 탭 활성화
+  switchDayDetailsTab('sales');
+
   modal.classList.remove('hidden');
+};
+
+window.openAttendanceDayDetailsModal = function(dateStr) {
+  // 인부출근 달력 클릭 시에도 통합 상세 모달을 열되, 'attendance' (인부 내역) 탭이 먼저 보이도록 처리
+  window.openDashDayDetailsModal(dateStr);
+  switchDayDetailsTab('attendance');
+};
+
+window.switchDayDetailsTab = function(tabName) {
+  const tabSalesBtn = document.getElementById('tab-day-sales');
+  const tabAttBtn = document.getElementById('tab-day-attendance');
+  const contentSales = document.getElementById('tab-content-day-sales');
+  const contentAtt = document.getElementById('tab-content-day-attendance');
+
+  if (!tabSalesBtn || !tabAttBtn || !contentSales || !contentAtt) return;
+
+  if (tabName === 'sales') {
+    tabSalesBtn.className = 'flex-1 pb-2 text-center text-sm font-semibold border-b-2 border-zandiPrimary text-white transition-all duration-200';
+    tabAttBtn.className = 'flex-1 pb-2 text-center text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all duration-200';
+    contentSales.classList.remove('hidden');
+    contentAtt.classList.add('hidden');
+  } else {
+    tabSalesBtn.className = 'flex-1 pb-2 text-center text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all duration-200';
+    tabAttBtn.className = 'flex-1 pb-2 text-center text-sm font-semibold border-b-2 border-zandiPrimary text-white transition-all duration-200';
+    contentSales.classList.add('hidden');
+    contentAtt.classList.remove('hidden');
+  }
 };
 
 // Dashboard Unpaid Customers List Rendering
@@ -1462,6 +1486,7 @@ function renderAll() {
   renderRent();
   renderExpenses();
   renderMonthlyLaborReport();
+  renderActivityFeed(); // 🔔 최근 변경 사항 알림 피드 동기화 추가
 }
 
 // 토스트 알림 유틸리티 함수
@@ -2393,7 +2418,157 @@ window.filterStatementBySpec = function(spec) {
   recalculateStatement();
 };
 
+// =========================================================================
+// 🔔 최근 변경 사항 알림 피드 & 통합 모달 이벤트 바인딩
+// =========================================================================
 
+// 탭 전환 이벤트 바인딩
+document.getElementById('tab-day-sales')?.addEventListener('click', () => switchDayDetailsTab('sales'));
+document.getElementById('tab-day-attendance')?.addEventListener('click', () => switchDayDetailsTab('attendance'));
 
+// 알림 모달 제어 이벤트 바인딩
+document.getElementById('notification-bell-btn')?.addEventListener('click', () => {
+  const modal = document.getElementById('notification-feed-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    renderActivityFeed();
+  }
+});
 
+const closeNotificationModal = () => {
+  document.getElementById('notification-feed-modal')?.classList.add('hidden');
+};
+document.getElementById('close-notification-modal-btn')?.addEventListener('click', closeNotificationModal);
+document.getElementById('btn-close-notification-modal')?.addEventListener('click', closeNotificationModal);
 
+// 모두 확인 완료 버튼 이벤트 바인딩
+document.getElementById('btn-read-all-notifications')?.addEventListener('click', () => {
+  if (!state.recent_activities) return;
+  
+  let seenIds = [];
+  try {
+    seenIds = JSON.parse(localStorage.getItem('zandi_seen_activity_ids') || '[]');
+  } catch (e) {
+    seenIds = [];
+  }
+
+  state.recent_activities.forEach(act => {
+    if (!seenIds.includes(act.id)) {
+      seenIds.push(act.id);
+    }
+  });
+
+  localStorage.setItem('zandi_seen_activity_ids', JSON.stringify(seenIds));
+  renderActivityFeed();
+  showToast('모든 알림을 확인 처리했습니다.', 'success');
+});
+
+// 알림 피드 렌더링 함수
+window.renderActivityFeed = function() {
+  const bellBtn = document.getElementById('notification-bell-btn');
+  const countBadge = document.getElementById('unread-notification-count');
+  const unreadSummary = document.getElementById('notification-unread-summary');
+  const listContainer = document.getElementById('notification-modal-list');
+
+  if (!listContainer) return;
+
+  let seenIds = [];
+  try {
+    seenIds = JSON.parse(localStorage.getItem('zandi_seen_activity_ids') || '[]');
+  } catch (e) {
+    seenIds = [];
+  }
+
+  const activities = state.recent_activities || [];
+  
+  // 안읽은 알림 목록
+  const unreadActivities = activities.filter(act => !seenIds.includes(act.id));
+  const unreadCount = unreadActivities.length;
+
+  // 배지 갱신
+  if (countBadge) {
+    if (unreadCount > 0) {
+      countBadge.textContent = unreadCount;
+      countBadge.classList.remove('hidden');
+      countBadge.classList.add('animate-pulse');
+    } else {
+      countBadge.classList.add('hidden');
+      countBadge.classList.remove('animate-pulse');
+    }
+  }
+
+  if (unreadSummary) {
+    unreadSummary.textContent = `확인 대기 중인 알림 ${unreadCount}개`;
+  }
+
+  listContainer.innerHTML = '';
+
+  if (activities.length === 0) {
+    listContainer.innerHTML = `
+      <div class="text-center py-8 text-slate-500 text-xs">
+        <i data-lucide="bell-off" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
+        최근 활동 기록이 없습니다.
+      </div>
+    `;
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
+
+  activities.forEach(act => {
+    const isUnread = !seenIds.includes(act.id);
+    const date = new Date(act.timestamp);
+    const timeStr = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+    const card = document.createElement('div');
+    card.className = `notification-item-card flex justify-between items-start gap-3 ${isUnread ? 'unread' : 'opacity-60'}`;
+    
+    // 알림 타입별 아이콘 매핑
+    let iconName = 'info';
+    let iconColor = 'text-blue-400';
+    if (act.type.includes('sale')) { iconName = 'banknote'; iconColor = 'text-emerald-400'; }
+    else if (act.type.includes('worker') || act.type.includes('attendance')) { iconName = 'users'; iconColor = 'text-violet-400'; }
+    else if (act.type.includes('rent')) { iconName = 'home'; iconColor = 'text-amber-400'; }
+    else if (act.type.includes('expense')) { iconName = 'droplet'; iconColor = 'text-rose-400'; }
+
+    card.innerHTML = `
+      <div class="flex items-start space-x-2.5 min-w-0 flex-1">
+        <div class="p-1 rounded bg-black/40 mt-0.5 flex-shrink-0">
+          <i data-lucide="${iconName}" class="w-4 h-4 ${iconColor}"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center space-x-1.5 flex-wrap">
+            <span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-black/30 text-slate-300">${act.user}</span>
+            <span class="text-[9px] text-slate-500">${timeStr}</span>
+          </div>
+          <p class="text-xs text-white mt-1 break-all">${act.message}</p>
+        </div>
+      </div>
+      ${isUnread ? `
+        <button onclick="confirmSingleNotification('${act.id}')" class="text-[10px] bg-zandiPrimary/20 hover:bg-zandiPrimary text-zandiPrimary hover:text-black font-semibold px-2 py-0.5 rounded transition-all duration-200 flex-shrink-0">
+          확인
+        </button>
+      ` : `
+        <span class="text-[10px] text-slate-500 flex items-center gap-0.5 flex-shrink-0"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-500"></i>완료</span>
+      `}
+    `;
+    listContainer.appendChild(card);
+  });
+
+  if (window.lucide) window.lucide.createIcons();
+};
+
+window.confirmSingleNotification = function(id) {
+  let seenIds = [];
+  try {
+    seenIds = JSON.parse(localStorage.getItem('zandi_seen_activity_ids') || '[]');
+  } catch (e) {
+    seenIds = [];
+  }
+
+  if (!seenIds.includes(id)) {
+    seenIds.push(id);
+  }
+
+  localStorage.setItem('zandi_seen_activity_ids', JSON.stringify(seenIds));
+  renderActivityFeed();
+};

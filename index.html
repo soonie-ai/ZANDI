@@ -103,6 +103,20 @@
         </button>
       </nav>
 
+      <!-- 종 모양 최근 알림 버튼 -->
+      <div class="px-1 pt-2">
+        <button id="notification-bell-btn" class="flex items-center justify-between w-full py-2.5 px-3.5 rounded-xl text-left text-slate-400 hover:bg-black/20 hover:text-white transition-all duration-300 relative border border-transparent hover:border-zandiBorder/20">
+          <div class="flex items-center space-x-2.5">
+            <div class="relative">
+              <i data-lucide="bell" class="w-4.5 h-4.5 text-amber-400"></i>
+              <span id="unread-notification-count" class="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[8px] font-bold w-4.5 h-4.5 rounded-full flex items-center justify-center hidden">0</span>
+            </div>
+            <span class="font-medium text-xs text-slate-300">최근 알림 확인</span>
+          </div>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-500"></i>
+        </button>
+      </div>
+
       <div class="border-t border-zandiBorder/40 pt-4 flex flex-col space-y-4" id="owner-info-panel">
         <!-- 소유주/사용자명 영역 -->
         <div class="glass-panel p-3 bg-black/40 border border-zandiBorder/30 rounded-xl space-y-3">
@@ -1415,42 +1429,78 @@
     </div>
   </div>
 
-  <!-- 6. 대시보드 일별 출하 내역 상세 모달 -->
+  <!-- 6. 일별 상세 통합 모달 (판매 내역 및 인부 출근 현황 통합) -->
   <div id="dash-day-details-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden">
     <div class="glass-panel p-6 max-w-xl w-full mx-4 border border-zandiBorder">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-bold text-white flex items-center gap-2">
-          <i data-lucide="truck" class="text-emerald-400"></i> <span id="dash-modal-date-title">2026-06-15</span> 출하 내역 상세
+          <i data-lucide="calendar" class="text-emerald-400"></i> <span id="dash-modal-date-title">2026-06-15</span> 통합 상세 조회
         </h3>
         <button id="close-dash-modal-btn" class="text-slate-400 hover:text-white p-1">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
+
+      <!-- 좌우 탭 버튼 -->
+      <div class="flex border-b border-zandiBorder/40 mb-4">
+        <button type="button" id="tab-day-sales" class="flex-1 pb-2 text-center text-sm font-semibold border-b-2 border-zandiPrimary text-white transition-all duration-200">
+          <i data-lucide="banknote" class="inline w-4 h-4 mr-1.5 align-text-bottom text-emerald-400"></i>판매 내역
+        </button>
+        <button type="button" id="tab-day-attendance" class="flex-1 pb-2 text-center text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all duration-200">
+          <i data-lucide="users" class="inline w-4 h-4 mr-1.5 align-text-bottom text-emerald-400"></i>인부 내역
+        </button>
+      </div>
+
       <div class="space-y-4">
-        <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
-          <table class="w-full text-left text-xs min-w-[450px]">
-            <thead>
-              <tr class="text-zandiTextMuted border-b border-zandiBorder/40">
-                <th class="pb-2">거래처명</th>
-                <th class="pb-2">품목 규격</th>
-                <th class="pb-2 text-right">수량</th>
-                <th class="pb-2 text-right">단가</th>
-                <th class="pb-2 text-right">총 거래액</th>
-                <th class="pb-2">작업 메모</th>
-              </tr>
-            </thead>
-            <tbody id="dash-modal-sales-list">
-              <!-- JS dynamically populates -->
-            </tbody>
-          </table>
+        <!-- 탭 1: 판매 내역 영역 -->
+        <div id="tab-content-day-sales" class="space-y-2">
+          <div class="overflow-x-auto max-h-[250px] overflow-y-auto">
+            <table class="w-full text-left text-xs min-w-[450px]">
+              <thead>
+                <tr class="text-zandiTextMuted border-b border-zandiBorder/40">
+                  <th class="pb-2">거래처명</th>
+                  <th class="pb-2">품목 규격</th>
+                  <th class="pb-2 text-right">수량</th>
+                  <th class="pb-2 text-right">단가</th>
+                  <th class="pb-2 text-right">총 거래액</th>
+                  <th class="pb-2">작업 메모</th>
+                </tr>
+              </thead>
+              <tbody id="dash-modal-sales-list">
+                <!-- JS dynamically populates -->
+              </tbody>
+            </table>
+          </div>
         </div>
+
+        <!-- 탭 2: 인부 내역 영역 (기본 hidden) -->
+        <div id="tab-content-day-attendance" class="space-y-2 hidden">
+          <div class="overflow-x-auto max-h-[250px] overflow-y-auto">
+            <table class="w-full text-left text-xs min-w-[450px]">
+              <thead>
+                <tr class="text-zandiTextMuted border-b border-zandiBorder/40">
+                  <th class="pb-2">인부명</th>
+                  <th class="pb-2 text-center">근무형태</th>
+                  <th class="pb-2 text-right">기준일당</th>
+                  <th class="pb-2 text-right">정산금액</th>
+                  <th class="pb-2 text-center">지급여부</th>
+                </tr>
+              </thead>
+              <tbody id="attendance-modal-list">
+                <!-- JS dynamically populates -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 하단 액션 버튼 영역 -->
         <div class="flex flex-wrap gap-2 justify-between items-center pt-2 border-t border-zandiBorder/20">
           <div class="flex gap-2">
             <button type="button" id="btn-dash-go-sale" class="btn-primary text-xs py-2 px-3">
-              <i data-lucide="banknote" class="w-3.5 h-3.5"></i> 이 날짜로 잔디판매 등록
+              <i data-lucide="banknote" class="w-3.5 h-3.5"></i> 이 날짜로 판매 등록
             </button>
             <button type="button" id="btn-dash-go-att" class="btn-secondary text-xs py-2 px-3 text-emerald-400 border-emerald-500/20">
-              <i data-lucide="calendar-check" class="w-3.5 h-3.5"></i> 이 날짜로 인부출근 등록
+              <i data-lucide="calendar-check" class="w-3.5 h-3.5"></i> 이 날짜로 출근 등록
             </button>
           </div>
           <button type="button" id="btn-close-dash-modal" class="btn-secondary text-xs py-2">닫기</button>
@@ -1459,36 +1509,29 @@
     </div>
   </div>
 
-  <!-- 6.5. 인부출근대장 일별 출근 내역 상세 모달 -->
-  <div id="attendance-day-details-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden">
-    <div class="glass-panel p-6 max-w-xl w-full mx-4 border border-zandiBorder">
+  <!-- 6.7 최근 변경 사항 알림 모달 -->
+  <div id="notification-feed-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden">
+    <div class="glass-panel p-6 max-w-md w-full mx-4 border border-zandiBorder">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-bold text-white flex items-center gap-2">
-          <i data-lucide="users" class="text-emerald-400"></i> <span id="attendance-modal-date-title">2026-06-15</span> 출근 현황 상세
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="bell" class="text-amber-400"></i> 최근 변경 사항 알림
         </h3>
-        <button id="close-attendance-modal-btn" class="text-slate-400 hover:text-white p-1">
+        <button id="close-notification-modal-btn" class="text-slate-400 hover:text-white p-1">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
       <div class="space-y-4">
-        <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
-          <table class="w-full text-left text-xs min-w-[450px]">
-            <thead>
-              <tr class="text-zandiTextMuted border-b border-zandiBorder/40">
-                <th class="pb-2">인부명</th>
-                <th class="pb-2 text-center">근무형태</th>
-                <th class="pb-2 text-right">기준일당</th>
-                <th class="pb-2 text-right">정산금액</th>
-                <th class="pb-2 text-center">지급여부</th>
-              </tr>
-            </thead>
-            <tbody id="attendance-modal-list">
-              <!-- JS dynamically populates -->
-            </tbody>
-          </table>
+        <div class="flex justify-between items-center">
+          <span class="text-xs text-slate-400" id="notification-unread-summary">확인 대기 중인 알림 0개</span>
+          <button type="button" id="btn-read-all-notifications" class="text-xs text-zandiPrimary hover:text-emerald-400 font-semibold transition-colors">
+            모두 확인 완료
+          </button>
+        </div>
+        <div class="max-h-[350px] overflow-y-auto space-y-2.5 pr-1" id="notification-modal-list">
+          <!-- JS dynamically populates -->
         </div>
         <div class="flex justify-end pt-2 border-t border-zandiBorder/20">
-          <button type="button" id="btn-close-attendance-modal" class="btn-secondary text-xs py-2">닫기</button>
+          <button type="button" id="btn-close-notification-modal" class="btn-secondary text-xs py-2">닫기</button>
         </div>
       </div>
     </div>

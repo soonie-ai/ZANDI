@@ -178,6 +178,13 @@ async function pullFromSupabase() {
             customerSortOrder = s.value;
             localStorage.setItem('customer_sort_order', s.value);
           }
+          if (s.key === 'recent_activities') {
+            try {
+              state.recent_activities = JSON.parse(s.value);
+            } catch (err) {
+              state.recent_activities = [];
+            }
+          }
           if (s.key === 'zandi_password') {
             localStorage.setItem('zandi_password', s.value);
           }
@@ -327,6 +334,8 @@ async function pushCustomers(customers) {
         throw error;
       }
     }
+    const names = list.map(c => c.name).join(', ');
+    logSystemActivity('customer_save', `'${names}' 거래처 정보가 등록/수정되었습니다.`);
   } catch (e) {
     console.error('[pushCustomers] 예외 발생:', e);
     throw e;
@@ -335,8 +344,10 @@ async function pushCustomers(customers) {
 
 async function removeCustomerSupabase(id) {
   if (!supabaseClient) return;
+  const name = state.customers.find(c => c.id === id)?.name || '알수없음';
   try {
     await supabaseClient.from('customers').delete().eq('id', id);
+    logSystemActivity('customer_delete', `'${name}' 거래처 정보가 삭제되었습니다.`);
   } catch (e) { console.error(e); }
 }
 
@@ -354,13 +365,19 @@ async function pushSale(sale) {
       notes: sale.notes,
       payments: sale.payments
     });
+    const customer = state.customers.find(c => c.id === sale.customerId)?.name || '알수없음';
+    logSystemActivity('sale_save', `'${customer}' 거래처의 ${sale.saleDate} 잔디 판매 건(규격: ${sale.productType}, 수량: ${sale.quantity})이 등록/수정되었습니다.`);
   } catch (e) { console.error(e); }
 }
 
 async function removeSaleSupabase(id) {
   if (!supabaseClient) return;
+  const sale = state.sales.find(s => s.id === id);
+  const customer = sale ? (state.customers.find(c => c.id === sale.customerId)?.name || '알수없음') : '알수없음';
+  const date = sale ? sale.saleDate : '';
   try {
     await supabaseClient.from('sales').delete().eq('id', id);
+    logSystemActivity('sale_delete', `'${customer}' 거래처의 ${date} 판매 내역이 삭제되었습니다.`);
   } catch (e) { console.error(e); }
 }
 
@@ -387,13 +404,16 @@ async function pushWorker(worker) {
         throw error;
       }
     }
+    logSystemActivity('worker_save', `'${worker.name}' 인부 정보가 등록/수정되었습니다.`);
   } catch (e) { console.error(e); }
 }
 
 async function removeWorkerSupabase(id) {
   if (!supabaseClient) return;
+  const name = state.workers.find(w => w.id === id)?.name || '알수없음';
   try {
     await supabaseClient.from('workers').delete().eq('id', id);
+    logSystemActivity('worker_delete', `'${name}' 인부 정보가 삭제되었습니다.`);
   } catch (e) { console.error(e); }
 }
 
@@ -408,13 +428,19 @@ async function pushAttendance(att) {
       daily_wage: att.dailyWage,
       is_paid: att.isPaid
     });
+    const name = state.workers.find(w => w.id === att.workerId)?.name || '알수없음';
+    logSystemActivity('attendance_save', `'${name}' 인부의 ${att.workDate} 출근(형태: ${att.workType === 1 ? '하루' : '반나절'})이 등록/수정되었습니다.`);
   } catch (e) { console.error(e); }
 }
 
 async function removeAttendanceSupabase(id) {
   if (!supabaseClient) return;
+  const att = state.attendance.find(a => a.id === id);
+  const name = att ? (state.workers.find(w => w.id === att.workerId)?.name || '알수없음') : '알수없음';
+  const date = att ? att.workDate : '';
   try {
     await supabaseClient.from('attendance').delete().eq('id', id);
+    logSystemActivity('attendance_delete', `'${name}' 인부의 ${date} 출근 내역이 삭제되었습니다.`);
   } catch (e) { console.error(e); }
 }
 
@@ -440,6 +466,7 @@ async function pushRent(rent) {
       showToast(`임대료 저장 실패: ${error.message} ${detail ? `(${detail})` : ''}`, 'error');
       throw error;
     }
+    logSystemActivity('rent_save', `'${rent.ownerName}' 임대인의 토지 임대 정보가 등록/수정되었습니다.`);
   } catch (e) {
     console.error('[pushRent] 예외 발생:', e);
     throw e;
@@ -448,12 +475,14 @@ async function pushRent(rent) {
 
 async function removeRentSupabase(id) {
   if (!supabaseClient) return;
+  const name = state.rents.find(r => r.id === id)?.ownerName || '알수없음';
   try {
     const { error } = await supabaseClient.from('rents').delete().eq('id', id);
     if (error) {
       console.error('[removeRentSupabase] Supabase 삭제 오류:', error);
       throw error;
     }
+    logSystemActivity('rent_delete', `'${name}' 임대인의 토지 임대 정보가 삭제되었습니다.`);
   } catch (e) {
     console.error('[removeRentSupabase] 예외 발생:', e);
     throw e;
@@ -491,6 +520,7 @@ async function pushExpense(expense) {
       console.warn('[pushExpense] Supabase 지출 저장 오류 (테이블이 없을 수 있음):', error);
       throw error;
     }
+    logSystemActivity('expense_save', `${expense.expenseDate} 지출 내역(사용처: ${expense.usage}, 금액: ${expense.amount.toLocaleString()}원)이 등록되었습니다.`);
   } catch (e) {
     console.error('[pushExpense] 예외 발생:', e);
     throw e;
@@ -499,15 +529,43 @@ async function pushExpense(expense) {
 
 async function removeExpenseSupabase(id) {
   if (!supabaseClient) return;
+  const exp = state.expenses.find(e => e.id === id);
+  const date = exp ? exp.expenseDate : '';
+  const usage = exp ? exp.usage : '';
   try {
     const { error } = await supabaseClient.from('expenses').delete().eq('id', id);
     if (error) {
       console.error('[removeExpenseSupabase] Supabase 지출 삭제 오류:', error);
       throw error;
     }
+    logSystemActivity('expense_delete', `${date} 지출 내역(${usage})이 삭제되었습니다.`);
   } catch (e) {
     console.error('[removeExpenseSupabase] 예외 발생:', e);
     throw e;
+  }
+}
+
+// 🔔 최근 변경 이력 등록 및 Supabase settings 연동 저장
+async function logSystemActivity(type, message) {
+  if (!supabaseClient) return;
+  const username = localStorage.getItem('zandi_login_username') || '사장님';
+  const newActivity = {
+    id: 'act-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+    timestamp: new Date().toISOString(),
+    user: username,
+    type: type,
+    message: message
+  };
+
+  if (!state.recent_activities) state.recent_activities = [];
+  state.recent_activities.unshift(newActivity);
+  state.recent_activities = state.recent_activities.slice(0, 20);
+
+  saveState();
+  try {
+    await pushSetting('recent_activities', JSON.stringify(state.recent_activities));
+  } catch (err) {
+    console.warn('[logSystemActivity] 알림 업로드 실패:', err);
   }
 }
 
