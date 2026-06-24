@@ -2126,8 +2126,26 @@ window.openStatementModal = function() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('stmt-issue-date').textContent = today;
 
-  // 공급자 정보 기본값 세팅
-  document.getElementById('stmt-supplier-owner').textContent = 'moonie / soonie';
+  // 공급자 및 금융 정보 LocalStorage 자동 연동 및 저장 설정
+  const editableFields = [
+    'stmt-supplier-no', 'stmt-supplier-name', 'stmt-supplier-owner', 
+    'stmt-supplier-addr', 'stmt-supplier-phone', 'stmt-supplier-fax', 
+    'stmt-supplier-type', 'stmt-bank-info', 'stmt-notes-info'
+  ];
+  editableFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      const saved = localStorage.getItem(`zandi_stmt_${id}`);
+      if (saved !== null) {
+        el.textContent = saved;
+      }
+      
+      // 글자 수정 후 포커스가 해제될 때 LocalStorage에 자동 저장
+      el.onblur = () => {
+        localStorage.setItem(`zandi_stmt_${id}`, el.textContent.trim());
+      };
+    }
+  });
 
   const tbody = document.getElementById('statement-items-body');
   tbody.innerHTML = '';
@@ -2143,17 +2161,18 @@ window.openStatementModal = function() {
     // 날짜 포맷 (MM/DD 형태)
     const dateObj = new Date(sale.saleDate);
     const dateStr = `${String(dateObj.getMonth() + 1).padStart(2, '0')}/${String(dateObj.getDate()).padStart(2, '0')}`;
-    const prodName = PRODUCT_TYPE_LABELS[sale.productType] || '잔디';
+    const specName = PRODUCT_TYPE_LABELS[sale.productType] || '평당';
 
     const tr = document.createElement('tr');
     tr.className = 'border-b border-black';
     tr.innerHTML = `
       <td class="border-r border-black p-1.5" contenteditable="true">${dateStr}</td>
-      <td class="border-r border-black p-1.5 text-left" contenteditable="true">${prodName}</td>
+      <td class="border-r border-black p-1.5 text-left" contenteditable="true">재배잔디</td>
+      <td class="border-r border-black p-1.5 text-center" contenteditable="true">${specName}</td>
       <td class="border-r border-black p-1.5 text-right font-semibold" contenteditable="true" oninput="recalculateStatement()">${sale.quantity.toLocaleString()}</td>
       <td class="border-r border-black p-1.5 text-right" contenteditable="true" oninput="recalculateStatement()">${sale.price.toLocaleString()}</td>
       <td class="border-r border-black p-1.5 text-right font-bold stmt-row-total">${total.toLocaleString()}원</td>
-      <td class="border-r border-black p-1.5 text-left" contenteditable="true">${sale.notes || ''}</td>
+      <td class="border-r border-black p-1.5 text-left" contenteditable="true"></td>
       <td class="p-1.5 no-print">
         <button onclick="deleteStatementRow(this)" class="text-rose-600 hover:text-rose-800 font-bold">X</button>
       </td>
@@ -2164,7 +2183,7 @@ window.openStatementModal = function() {
   if (salesData.length === 0) {
     const tr = document.createElement('tr');
     tr.id = 'stmt-empty-row';
-    tr.innerHTML = `<td colspan="7" class="p-4 text-center text-gray-400">해당 기간의 거래 내역이 없습니다. [+ 수기 항목 추가]를 통해 직접 항목을 채워주세요.</td>`;
+    tr.innerHTML = `<td colspan="8" class="p-4 text-center text-gray-400">해당 기간의 거래 내역이 없습니다. [+ 수기 항목 추가]를 통해 직접 항목을 채워주세요.</td>`;
     tbody.appendChild(tr);
   }
 
@@ -2193,7 +2212,8 @@ window.addStatementRow = function() {
   tr.className = 'border-b border-black';
   tr.innerHTML = `
     <td class="border-r border-black p-1.5" contenteditable="true"></td>
-    <td class="border-r border-black p-1.5 text-left" contenteditable="true">새 항목</td>
+    <td class="border-r border-black p-1.5 text-left" contenteditable="true">재배잔디</td>
+    <td class="border-r border-black p-1.5 text-center" contenteditable="true"></td>
     <td class="border-r border-black p-1.5 text-right font-semibold" contenteditable="true" oninput="recalculateStatement()">0</td>
     <td class="border-r border-black p-1.5 text-right" contenteditable="true" oninput="recalculateStatement()">0</td>
     <td class="border-r border-black p-1.5 text-right font-bold stmt-row-total">0원</td>
@@ -2215,7 +2235,7 @@ window.deleteStatementRow = function(btn) {
   if (tbody.children.length === 0) {
     const tr = document.createElement('tr');
     tr.id = 'stmt-empty-row';
-    tr.innerHTML = `<td colspan="7" class="p-4 text-center text-gray-400">해당 기간의 거래 내역이 없습니다. [+ 수기 항목 추가]를 통해 직접 항목을 채워주세요.</td>`;
+    tr.innerHTML = `<td colspan="8" class="p-4 text-center text-gray-400">해당 기간의 거래 내역이 없습니다. [+ 수기 항목 추가]를 통해 직접 항목을 채워주세요.</td>`;
     tbody.appendChild(tr);
   }
 };
@@ -2229,8 +2249,8 @@ window.recalculateStatement = function() {
 
   rows.forEach(row => {
     const cells = row.querySelectorAll('td');
-    const qtyStr = cells[2].textContent.replace(/[^0-9]/g, '');
-    const priceStr = cells[3].textContent.replace(/[^0-9]/g, '');
+    const qtyStr = cells[3].textContent.replace(/[^0-9]/g, '');
+    const priceStr = cells[4].textContent.replace(/[^0-9]/g, '');
 
     const qty = Number(qtyStr) || 0;
     const price = Number(priceStr) || 0;
@@ -2240,7 +2260,7 @@ window.recalculateStatement = function() {
     totalAmount += rowTotal;
 
     // 개별 행 총액 업데이트
-    cells[4].textContent = `${rowTotal.toLocaleString()}원`;
+    cells[5].textContent = `${rowTotal.toLocaleString()}원`;
   });
 
   document.getElementById('stmt-total-qty').textContent = `${totalQty.toLocaleString()} 장/평`;
