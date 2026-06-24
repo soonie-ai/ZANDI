@@ -2252,11 +2252,12 @@ window.recalculateStatement = function() {
   const tbody = document.getElementById('statement-items-body');
   const rows = tbody.querySelectorAll('tr:not(#stmt-empty-row)');
   
-  let totalQty = 0;
   let totalAmount = 0;
+  const qtyMap = {};
 
   rows.forEach(row => {
     const cells = row.querySelectorAll('td');
+    const specName = cells[2].textContent.trim() || '미지정';
     const qtyStr = cells[3].textContent.replace(/[^0-9]/g, '');
     const priceStr = cells[4].textContent.replace(/[^0-9]/g, '');
 
@@ -2264,14 +2265,24 @@ window.recalculateStatement = function() {
     const price = Number(priceStr) || 0;
     const rowTotal = qty * price;
 
-    totalQty += qty;
     totalAmount += rowTotal;
+
+    if (qty > 0) {
+      qtyMap[specName] = (qtyMap[specName] || 0) + qty;
+    }
 
     // 개별 행 총액 업데이트
     cells[5].textContent = `${rowTotal.toLocaleString()}원`;
   });
 
-  document.getElementById('stmt-total-qty').textContent = `${totalQty.toLocaleString()} 장/평`;
+  // 규격별 수량 취합 문자열 생성
+  const qtyParts = [];
+  for (const [spec, sum] of Object.entries(qtyMap)) {
+    const unit = (spec.includes('평') || spec.includes('pyeong')) ? '평' : '장';
+    qtyParts.push(`${spec} ${sum.toLocaleString()}${unit}`);
+  }
+
+  document.getElementById('stmt-total-qty').textContent = qtyParts.join(' / ') || '0 장';
   document.getElementById('stmt-total-amount').textContent = `${totalAmount.toLocaleString()}원`;
 };
 
