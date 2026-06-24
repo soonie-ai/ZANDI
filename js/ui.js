@@ -2093,28 +2093,48 @@ window.bulkPayAttendance = async function() {
 //  📄 거래명세서 (Statement) 관리 함수
 // ============================================================
 window.openStatementModal = function() {
-  const custId = document.getElementById('filter-sale-customer').value;
-  if (!custId) {
-    alert('거래명세서를 발행할 특정 거래처를 먼저 선택해 주세요.');
-    return;
+  const checkedBoxes = document.querySelectorAll('.sale-select-row-check:checked');
+  let salesData = [];
+  let customer = null;
+
+  if (checkedBoxes.length > 0) {
+    // 체크박스로 선택된 거래 건들만 모아서 발행
+    const selectedIds = Array.from(checkedBoxes).map(cb => cb.dataset.saleId);
+    salesData = state.sales.filter(sale => selectedIds.includes(sale.id));
+    
+    if (salesData.length > 0) {
+      const firstCustId = salesData[0].customerId;
+      customer = state.customers.find(c => c.id === firstCustId);
+    }
+  } else {
+    // 선택된 체크박스가 없으면 기존 방식대로 필터 조건 기반 발행
+    const custId = document.getElementById('filter-sale-customer').value;
+    if (!custId) {
+      alert('거래명세서를 발행할 항목들을 체크박스로 직접 선택해 주시거나,\n상단 필터에서 특정 거래처를 먼저 선택해 주세요.');
+      return;
+    }
+
+    customer = state.customers.find(c => c.id === custId);
+    if (!customer) {
+      alert('존재하지 않는 거래처입니다.');
+      return;
+    }
+
+    const startDate = document.getElementById('filter-sale-start').value;
+    const endDate = document.getElementById('filter-sale-end').value;
+
+    salesData = state.sales.filter(sale => {
+      if (sale.customerId !== custId) return false;
+      if (startDate && sale.saleDate < startDate) return false;
+      if (endDate && sale.saleDate > endDate) return false;
+      return true;
+    });
   }
 
-  const customer = state.customers.find(c => c.id === custId);
   if (!customer) {
-    alert('존재하지 않는 거래처입니다.');
+    alert('발행할 대상 거래처 정보를 찾을 수 없습니다.');
     return;
   }
-
-  const startDate = document.getElementById('filter-sale-start').value;
-  const endDate = document.getElementById('filter-sale-end').value;
-
-  // 필터링된 매출 내역 가져오기
-  let salesData = state.sales.filter(sale => {
-    if (sale.customerId !== custId) return false;
-    if (startDate && sale.saleDate < startDate) return false;
-    if (endDate && sale.saleDate > endDate) return false;
-    return true;
-  });
 
   // 날짜 오름차순 정렬 (명세서는 과거부터 순서대로 보여주는 것이 일반적)
   salesData.sort((a, b) => new Date(a.saleDate) - new Date(b.saleDate));
