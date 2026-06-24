@@ -2138,20 +2138,20 @@ window.openStatementModal = function() {
   // 공급자 및 금융 정보 LocalStorage 자동 연동 및 저장 설정
   const editableFields = [
     'stmt-supplier-no', 'stmt-supplier-name', 'stmt-supplier-owner', 
-    'stmt-supplier-addr', 'stmt-supplier-phone', 'stmt-supplier-fax', 
+    'stmt-supplier-addr', 'stmt-supplier-phone', 
     'stmt-supplier-type', 'stmt-bank-info', 'stmt-notes-info'
   ];
   editableFields.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
-      const saved = localStorage.getItem(`zandi_stmt_${id}`);
+      const saved = localStorage.getItem(`zandi_stmt_v2_${id}`);
       if (saved !== null) {
         el.textContent = saved;
       }
       
       // 글자 수정 후 포커스가 해제될 때 LocalStorage에 자동 저장
       el.onblur = () => {
-        localStorage.setItem(`zandi_stmt_${id}`, el.textContent.trim());
+        localStorage.setItem(`zandi_stmt_v2_${id}`, el.textContent.trim());
       };
     }
   });
