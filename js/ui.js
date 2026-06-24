@@ -2481,7 +2481,7 @@ window.renderActivityFeed = function() {
 
   const activities = state.recent_activities || [];
   
-  // 안읽은 알림 목록
+  // 안읽은 알림 목록만 화면에 표시하도록 필터링
   const unreadActivities = activities.filter(act => !seenIds.includes(act.id));
   const unreadCount = unreadActivities.length;
 
@@ -2503,24 +2503,23 @@ window.renderActivityFeed = function() {
 
   listContainer.innerHTML = '';
 
-  if (activities.length === 0) {
+  if (unreadActivities.length === 0) {
     listContainer.innerHTML = `
       <div class="text-center py-8 text-slate-500 text-xs">
         <i data-lucide="bell-off" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
-        최근 활동 기록이 없습니다.
+        새로운 알림이 없습니다.
       </div>
     `;
     if (window.lucide) window.lucide.createIcons();
     return;
   }
 
-  activities.forEach(act => {
-    const isUnread = !seenIds.includes(act.id);
+  unreadActivities.forEach(act => {
     const date = new Date(act.timestamp);
     const timeStr = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
     const card = document.createElement('div');
-    card.className = `notification-item-card flex justify-between items-start gap-3 ${isUnread ? 'unread' : 'opacity-60'}`;
+    card.className = `notification-item-card flex justify-between items-start gap-3 unread`;
     
     // 알림 타입별 아이콘 매핑
     let iconName = 'info';
@@ -2543,13 +2542,9 @@ window.renderActivityFeed = function() {
           <p class="text-xs text-white mt-1 break-all">${act.message}</p>
         </div>
       </div>
-      ${isUnread ? `
-        <button onclick="confirmSingleNotification('${act.id}')" class="text-[10px] bg-zandiPrimary/20 hover:bg-zandiPrimary text-zandiPrimary hover:text-black font-semibold px-2 py-0.5 rounded transition-all duration-200 flex-shrink-0">
-          확인
-        </button>
-      ` : `
-        <span class="text-[10px] text-slate-500 flex items-center gap-0.5 flex-shrink-0"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-500"></i>완료</span>
-      `}
+      <button onclick="confirmSingleNotification('${act.id}')" class="text-[10px] bg-zandiPrimary/20 hover:bg-zandiPrimary text-zandiPrimary hover:text-black font-semibold px-2 py-0.5 rounded transition-all duration-200 flex-shrink-0">
+        확인
+      </button>
     `;
     listContainer.appendChild(card);
   });
