@@ -2138,8 +2138,7 @@ window.openStatementModal = function() {
   // 공급자 및 금융 정보 LocalStorage 자동 연동 및 저장 설정
   const editableFields = [
     'stmt-supplier-no', 'stmt-supplier-name', 'stmt-supplier-owner', 
-    'stmt-supplier-addr', 'stmt-supplier-phone', 
-    'stmt-supplier-type', 'stmt-bank-info', 'stmt-notes-info'
+    'stmt-supplier-addr', 'stmt-supplier-phone', 'stmt-bank-info'
   ];
   editableFields.forEach(id => {
     const el = document.getElementById(id);
