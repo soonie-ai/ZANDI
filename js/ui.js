@@ -2144,6 +2144,20 @@ window.openStatementModal = function() {
   if (toggleCheckbox) {
     toggleCheckbox.checked = false;
   }
+  
+  // 규격 필터 버튼 활성화 상태 '전체'로 초기화
+  const filterContainer = document.getElementById('stmt-spec-filter-container');
+  if (filterContainer) {
+    const buttons = filterContainer.querySelectorAll('.stmt-spec-filter-btn');
+    buttons.forEach(btn => {
+      if (btn.dataset.spec === 'all') {
+        btn.className = 'stmt-spec-filter-btn px-2.5 py-1 text-[10px] rounded-md bg-zandiPrimary text-black font-semibold transition-all duration-300';
+      } else {
+        btn.className = 'stmt-spec-filter-btn px-2.5 py-1 text-[10px] rounded-md text-slate-400 hover:text-white transition-all duration-300';
+      }
+    });
+  }
+
   setTimeout(() => {
     toggleStatementDeleteColumn(false);
   }, 0);
@@ -2275,6 +2289,9 @@ window.recalculateStatement = function() {
   const qtyMap = {};
 
   rows.forEach(row => {
+    // 필터링으로 가려진(display: none) 행은 합산 및 계산에서 제외
+    if (row.style.display === 'none') return;
+
     const cells = row.querySelectorAll('td');
     const specName = cells[2].textContent.trim() || '미지정';
     const qtyStr = cells[3].textContent.replace(/[^0-9]/g, '');
@@ -2321,6 +2338,55 @@ window.toggleStatementDeleteColumn = function(hide) {
       col.style.removeProperty('display');
     }
   });
+};
+
+window.filterStatementBySpec = function(spec) {
+  const tbody = document.getElementById('statement-items-body');
+  if (!tbody) return;
+
+  const rows = tbody.querySelectorAll('tr:not(#stmt-empty-row)');
+  
+  // 1. 테이블 행 규격 기준 필터링 (가리기/보이기)
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    if (cells.length < 3) return;
+    const specName = cells[2].textContent.trim(); // 규격 칸
+
+    if (spec === 'all') {
+      row.style.removeProperty('display');
+    } else {
+      const targetLabel = PRODUCT_TYPE_LABELS[spec] || spec;
+      // 규격명이 필터 조건과 매칭되는지 확인 (평당 규격의 텍스트가 '평당'인 경우 보정)
+      const isMatch = (specName === targetLabel) || (spec === 'pyeong' && specName === '평당');
+      
+      if (isMatch) {
+        row.style.removeProperty('display');
+      } else {
+        // 수기 추가 항목(품명: 재배잔디, 규격: 비어있음)인 경우 항상 유지하여 명세서 훼손 방지
+        if (specName === '') {
+          row.style.removeProperty('display');
+        } else {
+          row.style.setProperty('display', 'none', 'important');
+        }
+      }
+    }
+  });
+
+  // 2. 필터 버튼 활성화 클래스 토글
+  const filterContainer = document.getElementById('stmt-spec-filter-container');
+  if (filterContainer) {
+    const buttons = filterContainer.querySelectorAll('.stmt-spec-filter-btn');
+    buttons.forEach(btn => {
+      if (btn.dataset.spec === spec) {
+        btn.className = 'stmt-spec-filter-btn px-2.5 py-1 text-[10px] rounded-md bg-zandiPrimary text-black font-semibold transition-all duration-300';
+      } else {
+        btn.className = 'stmt-spec-filter-btn px-2.5 py-1 text-[10px] rounded-md text-slate-400 hover:text-white transition-all duration-300';
+      }
+    });
+  }
+
+  // 3. 필터링된 보이는 내역 기준으로 합계 금액/수량 재계산
+  recalculateStatement();
 };
 
 

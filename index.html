@@ -1683,6 +1683,16 @@
           <i data-lucide="file-text" class="text-zandiPrimary"></i> 거래명세서 발행 및 편집
         </h3>
         <div class="flex items-center gap-3">
+          <!-- 규격 필터 버튼 그룹 -->
+          <div class="flex items-center gap-1 bg-black/40 p-1 rounded-lg border border-zandiBorder/20 mr-2" id="stmt-spec-filter-container">
+            <button onclick="filterStatementBySpec('all')" class="stmt-spec-filter-btn px-2.5 py-1 text-[10px] rounded-md bg-zandiPrimary text-black font-semibold transition-all duration-300" data-spec="all">전체</button>
+            <button onclick="filterStatementBySpec('1818')" class="stmt-spec-filter-btn px-2.5 py-1 text-[10px] rounded-md text-slate-400 hover:text-white transition-all duration-300" data-spec="1818">1818</button>
+            <button onclick="filterStatementBySpec('1818t')" class="stmt-spec-filter-btn px-2.5 py-1 text-[10px] rounded-md text-slate-400 hover:text-white transition-all duration-300" data-spec="1818t">1818t</button>
+            <button onclick="filterStatementBySpec('3030')" class="stmt-spec-filter-btn px-2.5 py-1 text-[10px] rounded-md text-slate-400 hover:text-white transition-all duration-300" data-spec="3030">3030</button>
+            <button onclick="filterStatementBySpec('3030t')" class="stmt-spec-filter-btn px-2.5 py-1 text-[10px] rounded-md text-slate-400 hover:text-white transition-all duration-300" data-spec="3030t">3030t</button>
+            <button onclick="filterStatementBySpec('4060')" class="stmt-spec-filter-btn px-2.5 py-1 text-[10px] rounded-md text-slate-400 hover:text-white transition-all duration-300" data-spec="4060">4060</button>
+            <button onclick="filterStatementBySpec('pyeong')" class="stmt-spec-filter-btn px-2.5 py-1 text-[10px] rounded-md text-slate-400 hover:text-white transition-all duration-300" data-spec="pyeong">평당</button>
+          </div>
           <!-- 삭제 버튼 숨기기 토글 -->
           <label class="custom-checkbox inline-flex items-center text-xs text-slate-300">
             <input type="checkbox" id="stmt-toggle-delete" onchange="toggleStatementDeleteColumn(this.checked)">
