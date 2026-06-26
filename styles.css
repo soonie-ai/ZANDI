@@ -187,9 +187,10 @@ body {
 }
 
 .checkmark {
-  width: 20px;
-  height: 20px;
-  border: 1.5px solid var(--border-color);
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(46, 204, 113, 0.55); /* 더 굵고 진한 초록 테두리로 시인성 강화 */
+  background-color: rgba(255, 255, 255, 0.08); /* 어두운 데서나 야외에서도 윤곽선과 영역이 확실히 보이도록 배경색 추가 */
   border-radius: 6px;
   margin-right: 8px;
   display: inline-flex;
@@ -206,7 +207,7 @@ body {
 .custom-checkbox input:checked + .checkmark::after {
   content: '✓';
   color: #050a07;
-  font-size: 12px;
+  font-size: 13px; /* 22px 크기에 맞게 미세 조정 */
   font-weight: bold;
 }
 
@@ -279,6 +280,12 @@ button, .nav-tab {
 /* iOS 자동 줌 방지 (입력 시 화면 확대 방지) */
 input, select, textarea {
   font-size: 16px !important;
+}
+
+/* 갤럭시 등 일부 모바일 브라우저에서 select option의 글자색이 투명/흰색 배경과 겹쳐 안 보이는 현상 차단 */
+select option {
+  background-color: #080f0c !important; /* 내부 배경색을 강하게 고정 */
+  color: #f8fcf9 !important; /* 텍스트색 강제 고정 */
 }
 
 /* 부드러운 모바일 스크롤 */
