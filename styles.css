@@ -552,10 +552,9 @@ select option {
   }
 }
 
-/* 초소형 (iPhone SE, Galaxy A 등) */
+/* 초소형 모바일 기기 대응 (필요한 경우 스타일 보정용으로 유지하되 글자는 숨기지 않음) */
 @media (max-width: 380px) {
-  .nav-tab span { display: none !important; }
-  .nav-tab { min-width: 46px !important; padding: 6px !important; }
+  .nav-tab { padding: 8px 12px !important; }
 }
 
 /* PWA 홈화면 추가 시 */
