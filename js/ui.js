@@ -2442,25 +2442,21 @@ document.getElementById('close-notification-modal-btn')?.addEventListener('click
 document.getElementById('btn-close-notification-modal')?.addEventListener('click', closeNotificationModal);
 
 // 모두 확인 완료 버튼 이벤트 바인딩
-document.getElementById('btn-read-all-notifications')?.addEventListener('click', () => {
-  if (!state.recent_activities) return;
+document.getElementById('btn-read-all-notifications')?.addEventListener('click', async () => {
+  if (!state.recent_activities || state.recent_activities.length === 0) return;
   
-  let seenIds = [];
-  try {
-    seenIds = JSON.parse(localStorage.getItem('zandi_seen_activity_ids') || '[]');
-  } catch (e) {
-    seenIds = [];
-  }
-
-  state.recent_activities.forEach(act => {
-    if (!seenIds.includes(act.id)) {
-      seenIds.push(act.id);
-    }
-  });
-
-  localStorage.setItem('zandi_seen_activity_ids', JSON.stringify(seenIds));
+  state.recent_activities = [];
+  saveState();
   renderActivityFeed();
-  showToast('모든 알림을 확인 처리했습니다.', 'success');
+  showToast('모든 알림을 확인 완료 처리했습니다.', 'success');
+
+  if (typeof pushSetting === 'function') {
+    try {
+      await pushSetting('recent_activities', JSON.stringify([]));
+    } catch (err) {
+      console.warn('[readAllNotifications] Supabase 알림 일괄 삭제 실패:', err);
+    }
+  }
 });
 
 // 알림 피드 렌더링 함수
@@ -2472,18 +2468,8 @@ window.renderActivityFeed = function() {
 
   if (!listContainer) return;
 
-  let seenIds = [];
-  try {
-    seenIds = JSON.parse(localStorage.getItem('zandi_seen_activity_ids') || '[]');
-  } catch (e) {
-    seenIds = [];
-  }
-
   const activities = state.recent_activities || [];
-  
-  // 안읽은 알림 목록만 화면에 표시하도록 필터링
-  const unreadActivities = activities.filter(act => !seenIds.includes(act.id));
-  const unreadCount = unreadActivities.length;
+  const unreadCount = activities.length;
 
   // 배지 갱신
   if (countBadge) {
@@ -2503,7 +2489,7 @@ window.renderActivityFeed = function() {
 
   listContainer.innerHTML = '';
 
-  if (unreadActivities.length === 0) {
+  if (activities.length === 0) {
     listContainer.innerHTML = `
       <div class="text-center py-8 text-slate-500 text-xs">
         <i data-lucide="bell-off" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
@@ -2514,7 +2500,7 @@ window.renderActivityFeed = function() {
     return;
   }
 
-  unreadActivities.forEach(act => {
+  activities.forEach(act => {
     const date = new Date(act.timestamp);
     const timeStr = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
@@ -2552,18 +2538,16 @@ window.renderActivityFeed = function() {
   if (window.lucide) window.lucide.createIcons();
 };
 
-window.confirmSingleNotification = function(id) {
-  let seenIds = [];
-  try {
-    seenIds = JSON.parse(localStorage.getItem('zandi_seen_activity_ids') || '[]');
-  } catch (e) {
-    seenIds = [];
-  }
-
-  if (!seenIds.includes(id)) {
-    seenIds.push(id);
-  }
-
-  localStorage.setItem('zandi_seen_activity_ids', JSON.stringify(seenIds));
+window.confirmSingleNotification = async function(id) {
+  state.recent_activities = (state.recent_activities || []).filter(act => act.id !== id);
+  saveState();
   renderActivityFeed();
+
+  if (typeof pushSetting === 'function') {
+    try {
+      await pushSetting('recent_activities', JSON.stringify(state.recent_activities));
+    } catch (err) {
+      console.warn('[confirmSingleNotification] Supabase 알림 개별 삭제 실패:', err);
+    }
+  }
 };
