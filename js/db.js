@@ -238,7 +238,8 @@ async function pullFromSupabase() {
       workDate: a.work_date, 
       workType: a.work_type, 
       dailyWage: a.daily_wage, 
-      isPaid: a.is_paid 
+      isPaid: a.is_paid,
+      notes: a.notes || ''
     }));
     if (ren && ren.length > 0) {
       // Supabase에 데이터가 있으면 → Supabase 데이터로 state 업데이트
@@ -419,15 +420,27 @@ async function removeWorkerSupabase(id) {
 
 async function pushAttendance(att) {
   if (!supabaseClient) return;
+  const payload = {
+    id: att.id,
+    worker_id: att.workerId,
+    work_date: att.workDate,
+    work_type: att.workType,
+    daily_wage: att.dailyWage,
+    is_paid: att.isPaid,
+    notes: att.notes || ''
+  };
   try {
-    await supabaseClient.from('attendance').upsert({
-      id: att.id,
-      worker_id: att.workerId,
-      work_date: att.workDate,
-      work_type: att.workType,
-      daily_wage: att.dailyWage,
-      is_paid: att.isPaid
-    });
+    const { error } = await supabaseClient.from('attendance').upsert(payload);
+    if (error) {
+      if (error.code === '42703' || (error.message && error.message.includes('notes'))) {
+        console.warn("Supabase 'attendance' 테이블에 'notes' 컬럼이 없어 해당 컬럼을 제외하고 저장 재시도합니다.");
+        const { notes, ...fallbackPayload } = payload;
+        const { error: retryError } = await supabaseClient.from('attendance').upsert(fallbackPayload);
+        if (retryError) throw retryError;
+      } else {
+        throw error;
+      }
+    }
     const name = state.workers.find(w => w.id === att.workerId)?.name || '알수없음';
     logSystemActivity('attendance_save', `'${name}' 인부의 ${att.workDate} 출근(형태: ${att.workType === 1 ? '하루' : '반나절'})이 등록/수정되었습니다.`);
   } catch (e) { console.error(e); }

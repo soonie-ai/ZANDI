@@ -413,6 +413,9 @@ function initForms() {
         // dailyWage = 입력된 금액 / 근무일수(workType)
         const dailyWage = workType > 0 ? (enteredWage / workType) : enteredWage;
 
+        const notesInput = row.querySelector('.att-worker-notes');
+        const notes = notesInput ? notesInput.value.trim() : '';
+
         // 고유 ID 생성 (동시 등록 시 밀리초 겹치지 않게 난수 결합)
         const id = 'att-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
         const newAtt = {
@@ -421,7 +424,8 @@ function initForms() {
           workDate,
           workType,
           dailyWage,
-          isPaid
+          isPaid,
+          notes
         };
         state.attendance.push(newAtt);
         await pushAttendance(newAtt);

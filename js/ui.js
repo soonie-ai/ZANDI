@@ -18,8 +18,8 @@ function renderDashboard() {
     return sum + (total - paid) + initialUncollected;
   }, 0);
 
-  const totalLabor = state.attendance.reduce((sum, item) => sum + (item.workType * item.dailyWage), 0);
-  const paidLabor = state.attendance.filter(a => a.isPaid).reduce((sum, item) => sum + (item.workType * item.dailyWage), 0);
+  const totalLabor = state.attendance.reduce((sum, item) => sum + (Number(item.workType) === 0 ? item.dailyWage : item.workType * item.dailyWage), 0);
+  const paidLabor = state.attendance.filter(a => a.isPaid).reduce((sum, item) => sum + (Number(item.workType) === 0 ? item.dailyWage : item.workType * item.dailyWage), 0);
   const unpaidLabor = totalLabor - paidLabor;
 
   const netProfit = totalSales - totalLabor;
@@ -74,6 +74,7 @@ function renderDashCalendar() {
 
     // Filter sales/deliveries on this date
     const daySales = state.sales.filter(s => s.saleDate === dateStr);
+    const hasLaborer = state.attendance.some(a => a.workDate === dateStr);
 
     const cell = document.createElement('div');
     cell.className = `calendar-day-cell cursor-pointer ${isToday ? 'today' : ''}`;
@@ -85,7 +86,7 @@ function renderDashCalendar() {
     if (dayOfWeek === 0) dayNumClass = 'text-[11px] font-bold text-rose-400 mb-1';
     else if (dayOfWeek === 6) dayNumClass = 'text-[11px] font-bold text-sky-400 mb-1';
 
-    let html = `<span class="${dayNumClass}">${day}</span>`;
+    let html = `<span class="${dayNumClass}">${day}${hasLaborer ? ' <span class="text-emerald-400 text-[11px] font-extrabold ml-1" title="인부 출근일">✓</span>' : ''}</span>`;
     
     if (daySales.length > 0) {
       html += `<div class="flex flex-col gap-1 w-full mt-1 max-h-[60px] overflow-y-auto pr-0.5">`;
@@ -160,13 +161,14 @@ window.openDashDayDetailsModal = function(dateStr) {
   } else {
     dayAttendance.forEach(att => {
       const worker = state.workers.find(w => w.id === att.workerId) || { name: '삭제된 인부' };
-      const payment = att.workType * att.dailyWage;
+      const payment = Number(att.workType) === 0 ? att.dailyWage : att.workType * att.dailyWage;
+      const typeLabel = att.workType === 1.0 ? '하루(1.0)' : (att.workType === 0.5 ? '반나절(0.5)' : `기타${att.notes ? ` (${att.notes})` : ''}`);
 
       const tr = document.createElement('tr');
       tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
       tr.innerHTML = `
         <td class="p-2 text-white font-medium">${worker.name}</td>
-        <td class="p-2 text-center text-gray-300">${att.workType === 1.0 ? '하루(1.0)' : '반나절(0.5)'}</td>
+        <td class="p-2 text-center text-gray-300">${typeLabel}</td>
         <td class="p-2 text-right text-gray-400">${att.dailyWage.toLocaleString()}원</td>
         <td class="p-2 text-right text-emerald-400 font-bold">${payment.toLocaleString()}원</td>
         <td class="p-2 text-center">
@@ -616,7 +618,7 @@ function renderAttendance() {
   state.workers.forEach(worker => {
     const wAtt = state.attendance.filter(a => a.workerId === worker.id);
     const totalDays = wAtt.reduce((sum, item) => sum + Number(item.workType), 0);
-    const unpaidWage = wAtt.filter(a => !a.isPaid).reduce((sum, item) => sum + (item.workType * item.dailyWage), 0);
+    const unpaidWage = wAtt.filter(a => !a.isPaid).reduce((sum, item) => sum + (Number(item.workType) === 0 ? item.dailyWage : item.workType * item.dailyWage), 0);
 
     const tr = document.createElement('tr');
     tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
@@ -656,10 +658,14 @@ function renderAttendance() {
           <select class="att-worker-type bg-black/40 border border-zandiBorder text-white text-[11px] rounded p-1 flex-1 sm:flex-none">
             <option value="1.0">하루 (1.0)</option>
             <option value="0.5">반나절 (0.5)</option>
+            <option value="0.0">기타</option>
           </select>
           <div class="flex items-center gap-0.5">
-            <input type="text" inputmode="numeric" class="att-worker-wage bg-black/40 border border-zandiBorder text-emerald-400 text-[11px] rounded p-1 w-20 text-right font-bold" value="${formatAmountInput(String(worker.baseDailyWage))}" placeholder="일당">
+            <input type="text" inputmode="numeric" class="att-worker-wage bg-black/40 border border-zandiBorder text-emerald-400 text-[11px] rounded p-1 w-20 text-right font-bold" value="${formatAmountInput(String(worker.baseDailyWage))}" placeholder="금액">
             <span class="text-[9px] text-slate-500">원</span>
+          </div>
+          <div class="att-worker-notes-container hidden flex items-center gap-0.5">
+            <input type="text" class="att-worker-notes bg-black/40 border border-zandiBorder text-slate-200 text-[11px] rounded p-1 w-24" placeholder="비고(이유)">
           </div>
           <label class="custom-checkbox flex-shrink-0">
             <input type="checkbox" class="att-worker-paid">
@@ -680,12 +686,20 @@ function renderAttendance() {
       if (select && wageInput) {
         select.addEventListener('change', () => {
           const val = Number(select.value);
+          const notesContainer = div.querySelector('.att-worker-notes-container');
           if (val === 1.0) {
             wageInput.value = formatAmountInput(String(worker.baseDailyWage));
+            if (notesContainer) notesContainer.classList.add('hidden');
           } else if (val === 0.5) {
             wageInput.value = formatAmountInput(String(worker.halfDailyWage || Math.round(worker.baseDailyWage * 0.5)));
+            if (notesContainer) notesContainer.classList.add('hidden');
+          } else if (val === 0.0) {
+            wageInput.value = '';
+            if (notesContainer) {
+              notesContainer.classList.remove('hidden');
+              notesContainer.classList.add('flex');
+            }
             wageInput.focus();
-            wageInput.select(); // 전체 선택 → 바로 다른 금액 입력 가능
           }
         });
       }
@@ -720,7 +734,7 @@ function renderAttendance() {
   });
 
   let attDaysSum = filteredAttendance.reduce((sum, item) => sum + Number(item.workType), 0);
-  let attWageSum = filteredAttendance.reduce((sum, item) => sum + (item.workType * item.dailyWage), 0);
+  let attWageSum = filteredAttendance.reduce((sum, item) => sum + (Number(item.workType) === 0 ? item.dailyWage : item.workType * item.dailyWage), 0);
 
   // Render Filter Sum Stats for Attendance
   document.getElementById('filter-att-count').textContent = filteredAttendance.length + '건';
@@ -786,12 +800,17 @@ function renderAttendanceCalendar() {
         const worker = state.workers.find(w => w.id === att.workerId) || { name: '알수없음' };
         const badgeClass = att.workType === 1.0 
           ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-          : 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+          : att.workType === 0.5 
+            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+            : 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
         
+        const typeLabelShort = att.workType === 1.0 ? '1.0' : (att.workType === 0.5 ? '0.5' : '기타');
+        const typeTitle = att.workType === 1.0 ? '하루(1.0)' : (att.workType === 0.5 ? '반나절(0.5)' : `기타${att.notes ? ` (${att.notes})` : ''}`);
+
         html += `
-          <div class="px-1.5 py-0.5 rounded text-[9px] font-semibold truncate ${badgeClass} flex justify-between items-center" title="${worker.name}: ${att.workType === 1.0 ? '하루(1.0)' : '반나절(0.5)'}">
+          <div class="px-1.5 py-0.5 rounded text-[9px] font-semibold truncate ${badgeClass} flex justify-between items-center" title="${worker.name}: ${typeTitle}">
             <span class="truncate">${worker.name}</span>
-            <span>${att.workType === 1.0 ? '1.0' : '0.5'}</span>
+            <span>${typeLabelShort}</span>
           </div>
         `;
       });
@@ -870,7 +889,8 @@ function renderAttendanceMatrix() {
   } else {
     filteredAttendance.forEach(att => {
       const worker = state.workers.find(w => w.id === att.workerId) || { name: '알수없음', baseDailyWage: 0 };
-      const payment = att.workType * att.dailyWage;
+      const payment = Number(att.workType) === 0 ? att.dailyWage : att.workType * att.dailyWage;
+      const typeLabel = att.workType === 1.0 ? '하루(1.0)' : (att.workType === 0.5 ? '반나절(0.5)' : `기타${att.notes ? ` (${att.notes})` : ''}`);
       
       const isPaidClass = att.isPaid 
         ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
@@ -887,9 +907,9 @@ function renderAttendanceMatrix() {
           <td class="p-3 text-gray-400 font-medium">${att.workDate}</td>
           <td class="p-3 text-white font-medium">${worker.name}</td>
           <td class="p-3 text-center text-gray-300">
-            ${att.workType === 1.0 ? '하루(1.0)' : '반나절(0.5)'}
+            ${typeLabel}
           </td>
-          <td class="p-3 text-right text-gray-300">${att.dailyWage.toLocaleString()}원</td>
+          <td class="p-3 text-right text-gray-300">${(Number(att.workType) === 0 ? '-' : `${att.dailyWage.toLocaleString()}원`)}</td>
           <td class="p-3 text-right text-emerald-400 font-bold">${payment.toLocaleString()}원</td>
           <td class="p-3 text-center">
             <span class="cursor-pointer inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${isPaidClass}" onclick="toggleAttendancePayment('${att.id}')" title="지급 여부 토글">
@@ -948,7 +968,7 @@ function updateCheckedAttendanceStats() {
     const att = state.attendance.find(a => a.id === cb.value);
     if (att) {
       days += Number(att.workType);
-      amount += (att.workType * att.dailyWage);
+      amount += (Number(att.workType) === 0 ? att.dailyWage : att.workType * att.dailyWage);
     }
   });
 
@@ -1398,7 +1418,7 @@ function renderMonthlyLaborReport() {
       };
     }
     const agg = workerAgg[att.workerId];
-    const amount = Number(att.workType) * Number(att.dailyWage);
+    const amount = Number(att.workType) === 0 ? Number(att.dailyWage) : Number(att.workType) * Number(att.dailyWage);
     agg.totalDays += Number(att.workType);
     agg.totalWage += amount;
     if (att.isPaid) {
