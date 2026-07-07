@@ -777,7 +777,13 @@
               </div>
               
               <!-- 인부 필터 컨트롤러 -->
-              <div class="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 mb-4 rounded-xl bg-black/25 border border-zandiBorder/20 text-xs">
+              <div class="grid grid-cols-2 md:grid-cols-6 gap-3 p-4 mb-4 rounded-xl bg-black/25 border border-zandiBorder/20 text-xs">
+                <div>
+                  <label class="block text-slate-400 mb-1">조회 월 선택</label>
+                  <select id="filter-att-month" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
+                    <!-- JS에서 동적으로 YYYY-MM 생성 및 '전체 기간' 옵션 제공 -->
+                  </select>
+                </div>
                 <div>
                   <label class="block text-slate-400 mb-1">인부 선택 필터</label>
                   <select id="filter-att-worker" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">

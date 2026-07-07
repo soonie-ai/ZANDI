@@ -82,6 +82,7 @@ let filters = {
 };
 
 let attFilters = {
+  month: new Date().toISOString().slice(0, 7), // 기본값 현재 연월(YYYY-MM)
   workerId: '',
   workType: '',
   startDate: '',

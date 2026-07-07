@@ -523,6 +523,7 @@ function initForms() {
 
   // 9) Filters Event Listeners for Attendance
   const applyAttFilters = () => {
+    attFilters.month = document.getElementById('filter-att-month').value;
     attFilters.workerId = document.getElementById('filter-att-worker').value;
     attFilters.workType = document.getElementById('filter-att-type').value;
     attFilters.startDate = document.getElementById('filter-att-start').value;
@@ -531,6 +532,7 @@ function initForms() {
     renderAttendance();
   };
 
+  document.getElementById('filter-att-month').addEventListener('change', applyAttFilters);
   document.getElementById('filter-att-worker').addEventListener('change', applyAttFilters);
   document.getElementById('filter-att-type').addEventListener('change', applyAttFilters);
   document.getElementById('filter-att-start').addEventListener('change', applyAttFilters);

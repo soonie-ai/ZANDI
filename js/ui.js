@@ -175,6 +175,7 @@ window.openDashDayDetailsModal = function(dateStr) {
           <span class="px-2 py-0.5 rounded text-[10px] ${att.isPaid ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'}">
             ${att.isPaid ? '지급완료' : '미지급'}
           </span>
+          ${att.isPaid && att.paidDate ? `<span class="block text-[9px] text-emerald-500 mt-0.5">${att.paidDate}</span>` : ''}
         </td>
       `;
       attendanceList.appendChild(tr);
@@ -508,8 +509,12 @@ function renderSales() {
             ${isFullyPaid ? '수금완료' : collected > 0 ? '부분수금' : '미수금'}
           </span>
           ${isFullyPaid 
-            ? `<span class="text-xs text-white font-bold mt-1.5">${collected.toLocaleString()}원</span>` 
-            : `<span class="text-xs text-rose-400 font-extrabold mt-1.5">${uncollected.toLocaleString()}원 미납</span>`
+            ? `<span class="text-xs text-white font-bold mt-1.5">${collected.toLocaleString()}원</span>
+               ${sale.payments && sale.payments.length > 0 ? `<span class="text-[9px] text-emerald-500 font-semibold mt-0.5">수금일: ${sale.payments[sale.payments.length - 1].date}</span>` : ''}` 
+            : collected > 0 
+              ? `<span class="text-xs text-rose-400 font-extrabold mt-1.5">${uncollected.toLocaleString()}원 미납</span>
+                 ${sale.payments && sale.payments.length > 0 ? `<span class="text-[9px] text-amber-500 font-semibold mt-0.5">최근수금: ${sale.payments[sale.payments.length - 1].date}</span>` : ''}`
+              : `<span class="text-xs text-rose-400 font-extrabold mt-1.5">${uncollected.toLocaleString()}원 / 미수</span>`
           }
         </div>
       </td>
@@ -853,10 +858,13 @@ function renderAttendanceMatrix() {
 
   // 필터링 적용된 출근 내역 데이터 추출
   let filteredAttendance = state.attendance.filter(att => {
+    if (attFilters.month && !att.workDate.startsWith(attFilters.month)) return false;
+    if (!attFilters.month) {
+      if (attFilters.startDate && att.workDate < attFilters.startDate) return false;
+      if (attFilters.endDate && att.workDate > attFilters.endDate) return false;
+    }
     if (attFilters.workerId && att.workerId !== attFilters.workerId) return false;
     if (attFilters.workType && att.workType !== Number(attFilters.workType)) return false;
-    if (attFilters.startDate && att.workDate < attFilters.startDate) return false;
-    if (attFilters.endDate && att.workDate > attFilters.endDate) return false;
     if (attFilters.isPaid) {
       if (attFilters.isPaid === 'paid' && !att.isPaid) return false;
       if (attFilters.isPaid === 'unpaid' && att.isPaid) return false;
@@ -926,6 +934,7 @@ function renderAttendanceMatrix() {
             <span class="cursor-pointer inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${isPaidClass}" onclick="toggleAttendancePayment('${att.id}')" title="지급 여부 토글">
               ${att.isPaid ? '지급완료' : '미지급'}
             </span>
+            ${att.isPaid && att.paidDate ? `<span class="block text-[9px] text-emerald-500 font-semibold mt-0.5">${att.paidDate}</span>` : ''}
           </td>
           <td class="p-3 text-center">
             <button onclick="deleteAttendance('${att.id}')" class="text-rose-400 hover:text-rose-300 p-1 flex items-center justify-center mx-auto" title="삭제">
@@ -1622,6 +1631,11 @@ window.toggleAttendancePayment = function(id) {
   const att = state.attendance.find(a => a.id === id);
   if (att) {
     att.isPaid = !att.isPaid;
+    if (att.isPaid) {
+      att.paidDate = new Date().toISOString().split('T')[0];
+    } else {
+      delete att.paidDate;
+    }
     saveState();
     pushAttendance(att);
     renderAll();
@@ -2127,8 +2141,10 @@ window.bulkPayAttendance = async function() {
   if (!confirm(confirmMsg)) return;
 
   // 일괄 업데이트 및 Supabase 동기화
+  const todayStr = new Date().toISOString().split('T')[0];
   for (const att of targetEntries) {
     att.isPaid = true;
+    att.paidDate = todayStr;
     try {
       await pushAttendance(att);
     } catch (err) {

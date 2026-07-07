@@ -253,7 +253,8 @@ async function pullFromSupabase() {
       workType: a.work_type, 
       dailyWage: a.daily_wage, 
       isPaid: a.is_paid,
-      notes: a.notes || ''
+      notes: a.notes || '',
+      paidDate: a.paid_date || ''
     }));
     if (ren && ren.length > 0) {
       // Supabase에 데이터가 있으면 → Supabase 데이터로 state 업데이트
@@ -441,16 +442,26 @@ async function pushAttendance(att) {
     work_type: att.workType,
     daily_wage: att.dailyWage,
     is_paid: att.isPaid,
-    notes: att.notes || ''
+    notes: att.notes || '',
+    paid_date: att.paidDate || ''
   };
   try {
     const { error } = await supabaseClient.from('attendance').upsert(payload);
     if (error) {
-      if (error.code === '42703' || (error.message && error.message.includes('notes'))) {
-        console.warn("Supabase 'attendance' 테이블에 'notes' 컬럼이 없어 해당 컬럼을 제외하고 저장 재시도합니다.");
-        const { notes, ...fallbackPayload } = payload;
-        const { error: retryError } = await supabaseClient.from('attendance').upsert(fallbackPayload);
-        if (retryError) throw retryError;
+      // 42703 (undefined_column) 또는 특정 컬럼 에러 발생 시
+      if (error.code === '42703' || (error.message && (error.message.includes('paid_date') || error.message.includes('notes')))) {
+        console.warn("Supabase 'attendance' 테이블에 paid_date 또는 notes 컬럼이 없어 제외 후 재시도합니다.");
+        const fallback1 = { ...payload };
+        delete fallback1.paid_date;
+        const { error: err2 } = await supabaseClient.from('attendance').upsert(fallback1);
+        if (err2 && (err2.code === '42703' || (err2.message && err2.message.includes('notes')))) {
+          const fallback2 = { ...fallback1 };
+          delete fallback2.notes;
+          const { error: err3 } = await supabaseClient.from('attendance').upsert(fallback2);
+          if (err3) throw err3;
+        } else if (err2) {
+          throw err2;
+        }
       } else {
         throw error;
       }
