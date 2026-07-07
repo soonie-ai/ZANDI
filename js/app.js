@@ -532,11 +532,27 @@ function initForms() {
     renderAttendance();
   };
 
-  document.getElementById('filter-att-month').addEventListener('change', applyAttFilters);
+  document.getElementById('filter-att-month').addEventListener('change', () => {
+    const monthVal = document.getElementById('filter-att-month').value;
+    if (monthVal) {
+      document.getElementById('filter-att-start').value = '';
+      document.getElementById('filter-att-end').value = '';
+    }
+    applyAttFilters();
+  });
   document.getElementById('filter-att-worker').addEventListener('change', applyAttFilters);
   document.getElementById('filter-att-type').addEventListener('change', applyAttFilters);
-  document.getElementById('filter-att-start').addEventListener('change', applyAttFilters);
-  document.getElementById('filter-att-end').addEventListener('change', applyAttFilters);
+  
+  const handleCustomDateChange = () => {
+    const startDateVal = document.getElementById('filter-att-start').value;
+    const endDateVal = document.getElementById('filter-att-end').value;
+    if (startDateVal || endDateVal) {
+      document.getElementById('filter-att-month').value = '';
+    }
+    applyAttFilters();
+  };
+  document.getElementById('filter-att-start').addEventListener('change', handleCustomDateChange);
+  document.getElementById('filter-att-end').addEventListener('change', handleCustomDateChange);
   document.getElementById('filter-att-paid').addEventListener('change', applyAttFilters);
 
   const monthSelect = document.getElementById('filter-monthly-labor-month');

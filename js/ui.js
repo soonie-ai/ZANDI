@@ -830,6 +830,7 @@ function renderAttendance() {
 
   // Filter attendance entries for stats
   let filteredAttendance = state.attendance.filter(att => {
+    if (attFilters.month && !att.workDate.startsWith(attFilters.month)) return false;
     if (attFilters.workerId && att.workerId !== attFilters.workerId) return false;
     if (attFilters.workType && att.workType !== Number(attFilters.workType)) return false;
     if (attFilters.startDate && att.workDate < attFilters.startDate) return false;
@@ -951,10 +952,8 @@ function renderAttendanceMatrix() {
   // 필터링 적용된 출근 내역 데이터 추출
   let filteredAttendance = state.attendance.filter(att => {
     if (attFilters.month && !att.workDate.startsWith(attFilters.month)) return false;
-    if (!attFilters.month) {
-      if (attFilters.startDate && att.workDate < attFilters.startDate) return false;
-      if (attFilters.endDate && att.workDate > attFilters.endDate) return false;
-    }
+    if (attFilters.startDate && att.workDate < attFilters.startDate) return false;
+    if (attFilters.endDate && att.workDate > attFilters.endDate) return false;
     if (attFilters.workerId && att.workerId !== attFilters.workerId) return false;
     if (attFilters.workType && att.workType !== Number(attFilters.workType)) return false;
     if (attFilters.isPaid) {
@@ -2253,6 +2252,44 @@ window.bulkPayAttendance = async function() {
   const masterCheck = document.getElementById('att-select-all-check');
   if (masterCheck) masterCheck.checked = false;
 };
+
+window.bulkDeleteAttendance = async function() {
+  const checkedBoxes = document.querySelectorAll('.att-select-check:checked');
+  if (checkedBoxes.length === 0) {
+    showToast('삭제할 출근 내역을 먼저 선택해 주세요.', 'info');
+    return;
+  }
+
+  const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+  const targetEntries = state.attendance.filter(att => selectedIds.includes(att.id));
+
+  if (targetEntries.length === 0) {
+    showToast('선택한 내역 중 삭제할 수 있는 내역이 없습니다.', 'info');
+    return;
+  }
+
+  const confirmMsg = `선택한 출근 내역 ${targetEntries.length}건을 일괄 삭제하시겠습니까?`;
+  if (!confirm(confirmMsg)) return;
+
+  // 일괄 삭제 및 Supabase 동기화
+  for (const att of targetEntries) {
+    state.attendance = state.attendance.filter(a => a.id !== att.id);
+    try {
+      await removeAttendanceSupabase(att.id);
+    } catch (err) {
+      console.error("[bulkDeleteAttendance] Supabase sync failed:", err);
+    }
+  }
+
+  saveState();
+  renderAll();
+  showToast(`총 ${targetEntries.length}건의 출근 기록이 일괄 삭제되었습니다.`, 'success');
+
+  // 마스터 체크박스 해제
+  const masterCheck = document.getElementById('att-select-all-check');
+  if (masterCheck) masterCheck.checked = false;
+};
+
 
 // ============================================================
 //  📄 거래명세서 (Statement) 관리 함수

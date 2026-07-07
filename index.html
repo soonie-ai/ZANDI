@@ -931,9 +931,14 @@
                     <span>금액: <strong class="text-rose-400 font-bold" id="checked-att-amount">0원</strong></span>
                   </div>
                 </div>
-                <button type="button" id="btn-bulk-pay-attendance" onclick="bulkPayAttendance()" class="btn-primary text-[11px] py-1.5 px-3 rounded-lg justify-center gap-1.5">
-                  선택한 내역 일괄 지급 완료 <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
-                </button>
+                <div class="flex items-center gap-2">
+                  <button type="button" id="btn-bulk-pay-attendance" onclick="bulkPayAttendance()" class="btn-primary text-[11px] py-1.5 px-3 rounded-lg justify-center gap-1.5">
+                    선택한 내역 일괄 지급 완료 <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button type="button" id="btn-bulk-delete-attendance" onclick="bulkDeleteAttendance()" class="btn-secondary text-[11px] py-1.5 px-3 rounded-lg justify-center gap-1.5 bg-rose-950/40 hover:bg-rose-950/60 text-rose-400 border border-rose-500/20">
+                    선택한 내역 일괄 삭제 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
               </div>
 
               <!-- 표 뷰 컨테이너 -->
