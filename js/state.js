@@ -182,3 +182,6 @@ function saveState() {
     recent_activities: state.recent_activities
   }));
 }
+
+let accountingMode = 'monthly'; // 'monthly' 또는 'yearly'
+

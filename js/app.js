@@ -546,6 +546,33 @@ function initForms() {
     });
   }
 
+  // Accounting sub-tab selectors
+  const btnAccMonthly = document.getElementById('btn-accounting-monthly');
+  const btnAccYearly = document.getElementById('btn-accounting-yearly');
+  if (btnAccMonthly && btnAccYearly) {
+    btnAccMonthly.addEventListener('click', () => {
+      btnAccMonthly.classList.add('bg-zandiPrimary', 'text-black', 'font-semibold');
+      btnAccMonthly.classList.remove('text-slate-400', 'hover:text-white');
+      
+      btnAccYearly.classList.remove('bg-zandiPrimary', 'text-black', 'font-semibold');
+      btnAccYearly.classList.add('text-slate-400', 'hover:text-white');
+      
+      accountingMode = 'monthly';
+      renderAccounting();
+    });
+
+    btnAccYearly.addEventListener('click', () => {
+      btnAccYearly.classList.add('bg-zandiPrimary', 'text-black', 'font-semibold');
+      btnAccYearly.classList.remove('text-slate-400', 'hover:text-white');
+      
+      btnAccMonthly.classList.remove('bg-zandiPrimary', 'text-black', 'font-semibold');
+      btnAccMonthly.classList.add('text-slate-400', 'hover:text-white');
+      
+      accountingMode = 'yearly';
+      renderAccounting();
+    });
+  }
+
   // 9.5) Attendance View Toggle & Calendar Navigation Event Listeners
   const btnViewTable = document.getElementById('btn-view-table');
   const btnViewCalendar = document.getElementById('btn-view-calendar');

@@ -1,29 +1,36 @@
 function renderDashboard() {
-  const totalSales = state.sales.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-  const collectedSales = state.sales.reduce((sum, item) => {
+  const currentYear = String(new Date().getFullYear());
+  const currentMonthStr = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+
+  // 1) 올해 매출 계산
+  const yearlySalesEntries = state.sales.filter(s => s.saleDate.startsWith(currentYear));
+  const totalSales = yearlySalesEntries.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+  const collectedSales = yearlySalesEntries.reduce((sum, item) => {
     const collected = (item.payments || []).reduce((s, p) => s + p.amount, 0);
     return sum + collected;
   }, 0);
-  
-  // 거래처별 전체 미수금의 합 (거래 내역 미수금 + 이월 미수금 잔액)
-  const uncollectedSales = state.customers.reduce((sum, customer) => {
-    const cSales = state.sales.filter(s => s.customerId === customer.id);
-    const total = cSales.reduce((s, item) => s + (item.quantity * item.price), 0);
-    const paid = cSales.reduce((s, item) => s + (item.payments || []).reduce((sm, p) => sm + p.amount, 0), 0);
-    
-    const initialDebtVal = customer.initialDebt || 0;
-    const initialCollectedVal = customer.initialDebtCollected || 0;
-    const initialUncollected = Math.max(0, initialDebtVal - initialCollectedVal);
-    
-    return sum + (total - paid) + initialUncollected;
-  }, 0);
+  const uncollectedSales = totalSales - collectedSales;
 
-  const totalLabor = state.attendance.reduce((sum, item) => sum + (Number(item.workType) === 0 ? item.dailyWage : item.workType * item.dailyWage), 0);
-  const paidLabor = state.attendance.filter(a => a.isPaid).reduce((sum, item) => sum + (Number(item.workType) === 0 ? item.dailyWage : item.workType * item.dailyWage), 0);
+  // 2) 올해 인건비 계산
+  const yearlyLaborEntries = state.attendance.filter(a => a.workDate.startsWith(currentYear));
+  const totalLabor = yearlyLaborEntries.reduce((sum, item) => sum + (Number(item.workType) === 0 ? item.dailyWage : item.workType * item.dailyWage), 0);
+  const paidLabor = yearlyLaborEntries.filter(a => a.isPaid).reduce((sum, item) => sum + (Number(item.workType) === 0 ? item.dailyWage : item.workType * item.dailyWage), 0);
   const unpaidLabor = totalLabor - paidLabor;
 
-  const netProfit = totalSales - totalLabor;
+  // 3) 올해 지출 계산 (expenses)
+  const yearlyExpenseEntries = (state.expenses || []).filter(e => e.expenseDate.startsWith(currentYear));
+  const totalExpenses = yearlyExpenseEntries.reduce((sum, item) => sum + item.amount, 0);
 
+  // 4) 올해 예상 순이익
+  const netProfit = totalSales - totalLabor - totalExpenses;
+
+  // 5) 이번 달 순이익 계산
+  const monthlySales = state.sales.filter(s => s.saleDate.startsWith(currentMonthStr)).reduce((sum, item) => sum + (item.quantity * item.price), 0);
+  const monthlyLabor = state.attendance.filter(a => a.workDate.startsWith(currentMonthStr)).reduce((sum, item) => sum + (Number(item.workType) === 0 ? item.dailyWage : item.workType * item.dailyWage), 0);
+  const monthlyExpenses = (state.expenses || []).filter(e => e.expenseDate.startsWith(currentMonthStr)).reduce((sum, item) => sum + item.amount, 0);
+  const monthlyNetProfit = monthlySales - monthlyLabor - monthlyExpenses;
+
+  // UI 적용
   document.getElementById('dash-total-sales').textContent = totalSales.toLocaleString() + '원';
   document.getElementById('dash-collected-sales').textContent = collectedSales.toLocaleString() + '원';
   document.getElementById('dash-uncollected-sales').textContent = uncollectedSales.toLocaleString() + '원';
@@ -31,6 +38,9 @@ function renderDashboard() {
   document.getElementById('dash-total-labor').textContent = totalLabor.toLocaleString() + '원';
   document.getElementById('dash-paid-labor').textContent = paidLabor.toLocaleString() + '원';
   document.getElementById('dash-unpaid-labor').textContent = unpaidLabor.toLocaleString() + '원';
+
+  document.getElementById('dash-total-expenses').textContent = totalExpenses.toLocaleString() + '원';
+  document.getElementById('dash-monthly-net-profit').textContent = monthlyNetProfit.toLocaleString() + '원';
 
   const netProfitEl = document.getElementById('dash-net-profit');
   netProfitEl.textContent = netProfit.toLocaleString() + '원';
@@ -42,6 +52,59 @@ function renderDashboard() {
 
   renderDashCalendar();
   renderUnpaidCustomers();
+  renderDashMonthlySummary();
+}
+
+function renderDashMonthlySummary() {
+  const tableBody = document.getElementById('dash-monthly-summary-table');
+  if (!tableBody) return;
+  tableBody.innerHTML = '';
+
+  const months = [];
+  const d = new Date();
+  for (let i = 0; i < 6; i++) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    months.push(`${year}-${month}`);
+    d.setMonth(d.getMonth() - 1);
+  }
+
+  months.forEach(m => {
+    // Sales
+    const mSalesEntries = state.sales.filter(s => s.saleDate.startsWith(m));
+    const totalSales = mSalesEntries.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+    const collectedSales = mSalesEntries.reduce((sum, item) => sum + (item.payments || []).reduce((s, p) => s + p.amount, 0), 0);
+    const uncollectedSales = totalSales - collectedSales;
+
+    // Labor
+    const mLaborEntries = state.attendance.filter(a => a.workDate.startsWith(m));
+    const totalLabor = mLaborEntries.reduce((sum, item) => sum + (Number(item.workType) === 0 ? item.dailyWage : item.workType * item.dailyWage), 0);
+    const paidLabor = mLaborEntries.filter(a => a.isPaid).reduce((sum, item) => sum + (Number(item.workType) === 0 ? item.dailyWage : item.workType * item.dailyWage), 0);
+    const unpaidLabor = totalLabor - paidLabor;
+
+    // Expenses
+    const totalExpenses = (state.expenses || []).filter(e => e.expenseDate.startsWith(m)).reduce((sum, item) => sum + item.amount, 0);
+
+    // Net Profit
+    const netProfit = totalSales - totalLabor - totalExpenses;
+
+    const tr = document.createElement('tr');
+    tr.className = 'border-b border-gray-800 hover:bg-emerald-950/10';
+    tr.innerHTML = `
+      <td class="p-3 font-semibold text-white">${m.split('-')[0]}년 ${m.split('-')[1]}월</td>
+      <td class="p-3 text-right">
+        <span class="text-white font-medium">${totalSales.toLocaleString()}원</span>
+        <span class="block text-[10px] text-slate-500">수금: ${collectedSales.toLocaleString()} / 미수: ${uncollectedSales.toLocaleString()}</span>
+      </td>
+      <td class="p-3 text-right">
+        <span class="text-white font-medium">${totalLabor.toLocaleString()}원</span>
+        <span class="block text-[10px] text-slate-500">지급: ${paidLabor.toLocaleString()} / 미지급: ${unpaidLabor.toLocaleString()}</span>
+      </td>
+      <td class="p-3 text-right text-rose-400 font-medium">${totalExpenses.toLocaleString()}원</td>
+      <td class="p-3 text-right font-bold ${netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${netProfit.toLocaleString()}원</td>
+    `;
+    tableBody.appendChild(tr);
+  });
 }
 
 function renderDashCalendar() {
@@ -1556,6 +1619,7 @@ function renderAll() {
   renderExpenses();
   renderMonthlyLaborReport();
   renderActivityFeed(); // 🔔 최근 변경 사항 알림 피드 동기화 추가
+  renderAccounting();
 }
 
 // 토스트 알림 유틸리티 함수
@@ -2625,5 +2689,231 @@ window.confirmSingleNotification = async function(id) {
     } catch (err) {
       console.warn('[confirmSingleNotification] Supabase 알림 개별 삭제 실패:', err);
     }
+  }
+};
+
+window.accountingChartInstance = null;
+
+window.renderAccounting = function() {
+  const chartCanvas = document.getElementById('accounting-chart');
+  const tableBody = document.getElementById('accounting-table-body');
+  if (!chartCanvas || !tableBody) return;
+
+  const chartTitle = document.getElementById('accounting-chart-title');
+  const tableTitle = document.getElementById('accounting-table-title');
+  const headerPeriod = document.getElementById('acc-header-period');
+
+  // 1) 데이터 수집 및 그룹화
+  const dataMap = {};
+
+  if (accountingMode === 'monthly') {
+    // 월별 (YYYY-MM)
+    if (chartTitle) chartTitle.textContent = '월별 손익 추이 그래프';
+    if (tableTitle) tableTitle.textContent = '월별 손익 상세 대장';
+    if (headerPeriod) headerPeriod.textContent = '연월';
+
+    // 매출 그룹화
+    state.sales.forEach(s => {
+      if (!s.saleDate) return;
+      const month = s.saleDate.slice(0, 7);
+      if (!dataMap[month]) dataMap[month] = { sales: 0, collected: 0, uncollected: 0, labor: 0, paidLabor: 0, unpaidLabor: 0, expenses: 0 };
+      const amount = s.quantity * s.price;
+      const col = (s.payments || []).reduce((sum, p) => sum + p.amount, 0);
+      dataMap[month].sales += amount;
+      dataMap[month].collected += col;
+      dataMap[month].uncollected += (amount - col);
+    });
+
+    // 인건비 그룹화
+    state.attendance.forEach(a => {
+      if (!a.workDate) return;
+      const month = a.workDate.slice(0, 7);
+      if (!dataMap[month]) dataMap[month] = { sales: 0, collected: 0, uncollected: 0, labor: 0, paidLabor: 0, unpaidLabor: 0, expenses: 0 };
+      const amount = Number(a.workType) === 0 ? a.dailyWage : a.workType * a.dailyWage;
+      dataMap[month].labor += amount;
+      if (a.isPaid) dataMap[month].paidLabor += amount;
+      else dataMap[month].unpaidLabor += amount;
+    });
+
+    // 농자재 지출 그룹화
+    (state.expenses || []).forEach(e => {
+      if (!e.expenseDate) return;
+      const month = e.expenseDate.slice(0, 7);
+      if (!dataMap[month]) dataMap[month] = { sales: 0, collected: 0, uncollected: 0, labor: 0, paidLabor: 0, unpaidLabor: 0, expenses: 0 };
+      dataMap[month].expenses += e.amount;
+    });
+
+  } else {
+    // 연도별 (YYYY)
+    if (chartTitle) chartTitle.textContent = '연간 손익 추이 그래프';
+    if (tableTitle) tableTitle.textContent = '연간 손익 상세 대장';
+    if (headerPeriod) headerPeriod.textContent = '연도';
+
+    // 매출 그룹화
+    state.sales.forEach(s => {
+      if (!s.saleDate) return;
+      const year = s.saleDate.slice(0, 4);
+      if (!dataMap[year]) dataMap[year] = { sales: 0, collected: 0, uncollected: 0, labor: 0, paidLabor: 0, unpaidLabor: 0, expenses: 0 };
+      const amount = s.quantity * s.price;
+      const col = (s.payments || []).reduce((sum, p) => sum + p.amount, 0);
+      dataMap[year].sales += amount;
+      dataMap[year].collected += col;
+      dataMap[year].uncollected += (amount - col);
+    });
+
+    // 인건비 그룹화
+    state.attendance.forEach(a => {
+      if (!a.workDate) return;
+      const year = a.workDate.slice(0, 4);
+      if (!dataMap[year]) dataMap[year] = { sales: 0, collected: 0, uncollected: 0, labor: 0, paidLabor: 0, unpaidLabor: 0, expenses: 0 };
+      const amount = Number(a.workType) === 0 ? a.dailyWage : a.workType * a.dailyWage;
+      dataMap[year].labor += amount;
+      if (a.isPaid) dataMap[year].paidLabor += amount;
+      else dataMap[year].unpaidLabor += amount;
+    });
+
+    // 농자재 지출 그룹화
+    (state.expenses || []).forEach(e => {
+      if (!e.expenseDate) return;
+      const year = e.expenseDate.slice(0, 4);
+      if (!dataMap[year]) dataMap[year] = { sales: 0, collected: 0, uncollected: 0, labor: 0, paidLabor: 0, unpaidLabor: 0, expenses: 0 };
+      dataMap[year].expenses += e.amount;
+    });
+  }
+
+  // 2) 정렬 및 차트 데이터 준비
+  const periods = Object.keys(dataMap).sort();
+  if (periods.length === 0) {
+    const current = accountingMode === 'monthly' ? new Date().toISOString().slice(0, 7) : String(new Date().getFullYear());
+    periods.push(current);
+    dataMap[current] = { sales: 0, collected: 0, uncollected: 0, labor: 0, paidLabor: 0, unpaidLabor: 0, expenses: 0 };
+  }
+
+  const salesData = [];
+  const costsData = [];
+  const profitData = [];
+  const chartLabels = [];
+
+  tableBody.innerHTML = '';
+
+  periods.forEach(p => {
+    const d = dataMap[p];
+    const totalCosts = d.labor + d.expenses;
+    const netProfit = d.sales - totalCosts;
+
+    salesData.push(d.sales);
+    costsData.push(totalCosts);
+    profitData.push(netProfit);
+
+    const labelText = accountingMode === 'monthly' 
+      ? `${p.split('-')[0]}년 ${p.split('-')[1]}월` 
+      : `${p}년`;
+    chartLabels.push(labelText);
+  });
+
+  const reversedPeriods = [...periods].reverse();
+  reversedPeriods.forEach(p => {
+    const d = dataMap[p];
+    const totalCosts = d.labor + d.expenses;
+    const netProfit = d.sales - totalCosts;
+
+    const labelText = accountingMode === 'monthly' 
+      ? `${p.split('-')[0]}년 ${p.split('-')[1]}월` 
+      : `${p}년`;
+
+    const tr = document.createElement('tr');
+    tr.className = 'border-b border-gray-800 hover:bg-emerald-950/10 text-xs';
+    tr.innerHTML = `
+      <td class="p-3 font-semibold text-white">${labelText}</td>
+      <td class="p-3 text-right">
+        <span class="text-white font-medium">${d.sales.toLocaleString()}원</span>
+        <span class="block text-[10px] text-slate-500">수금: ${d.collected.toLocaleString()} / 미수: ${d.uncollected.toLocaleString()}</span>
+      </td>
+      <td class="p-3 text-right">
+        <span class="text-white font-medium">${d.labor.toLocaleString()}원</span>
+        <span class="block text-[10px] text-slate-500">지급: ${d.paidLabor.toLocaleString()} / 미지급: ${d.unpaidLabor.toLocaleString()}</span>
+      </td>
+      <td class="p-3 text-right text-rose-400 font-medium">${d.expenses.toLocaleString()}원</td>
+      <td class="p-3 text-right font-bold ${netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${netProfit.toLocaleString()}원</td>
+    `;
+    tableBody.appendChild(tr);
+  });
+
+  // 3) 그래프(차트) 렌더링
+  if (window.accountingChartInstance) {
+    window.accountingChartInstance.destroy();
+  }
+
+  if (typeof Chart !== 'undefined') {
+    const ctx = chartCanvas.getContext('2d');
+    window.accountingChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: chartLabels,
+        datasets: [
+          {
+            label: '총 매출',
+            data: salesData,
+            backgroundColor: 'rgba(16, 185, 129, 0.65)',
+            borderColor: '#10b981',
+            borderWidth: 1.5,
+            borderRadius: 4
+          },
+          {
+            label: '총 지출 (인건비+농자재)',
+            data: costsData,
+            backgroundColor: 'rgba(244, 63, 94, 0.65)',
+            borderColor: '#f43f5e',
+            borderWidth: 1.5,
+            borderRadius: 4
+          },
+          {
+            label: '예상 순이익',
+            data: profitData,
+            type: 'line',
+            borderColor: '#fbbf24',
+            backgroundColor: '#fbbf24',
+            borderWidth: 2.5,
+            tension: 0.35,
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: {
+              color: '#94a3b8',
+              font: { size: 11 }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return context.dataset.label + ': ' + context.raw.toLocaleString() + '원';
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#94a3b8', font: { size: 10 } }
+          },
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: {
+              color: '#94a3b8',
+              font: { size: 10 },
+              callback: function(val) {
+                return (val / 10000).toLocaleString() + '만원';
+              }
+            }
+          }
+        }
+      }
+    });
   }
 };
