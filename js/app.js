@@ -446,6 +446,66 @@ function initForms() {
     document.getElementById('att-date').value = new Date().toISOString().split('T')[0];
   });
 
+  // 7.5) 용역 등록 토글 및 등록 처리
+  const btnToggleTemp = document.getElementById('btn-toggle-temp-worker');
+  const tempWorkerForm = document.getElementById('temp-worker-form');
+  if (btnToggleTemp && tempWorkerForm) {
+    btnToggleTemp.addEventListener('click', () => {
+      tempWorkerForm.classList.toggle('hidden');
+      if (!tempWorkerForm.classList.contains('hidden')) {
+        document.getElementById('temp-worker-wage').focus();
+      }
+    });
+  }
+
+  const tempWorkerFormEl = document.getElementById('temp-worker-form');
+  if (tempWorkerFormEl) {
+    tempWorkerFormEl.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const workDate = document.getElementById('att-date').value;
+      if (!workDate) return;
+
+      const gender = document.querySelector('input[name="temp-worker-gender"]:checked').value;
+      const workerId = gender === 'male' ? 'worker-temp-male' : 'worker-temp-female';
+      
+      const wageInput = document.getElementById('temp-worker-wage');
+      const enteredWage = Number(wageInput.value.replace(/,/g, '')) || 0;
+      
+      const notesInput = document.getElementById('temp-worker-notes');
+      const notes = notesInput.value.trim();
+
+      const paidInput = document.getElementById('temp-worker-paid');
+      const isPaid = paidInput ? paidInput.checked : false;
+
+      if (enteredWage <= 0 || !notes) {
+        alert('금액과 비고(인력소 등)를 정확하게 입력해주세요.');
+        return;
+      }
+
+      // 고유 ID 생성
+      const id = 'att-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+      const newAtt = {
+        id,
+        workerId,
+        workDate,
+        workType: 0.0, // 용역(기타)은 workType = 0.0
+        dailyWage: enteredWage,
+        isPaid,
+        notes
+      };
+
+      state.attendance.push(newAtt);
+      await pushAttendance(newAtt);
+      
+      saveState();
+      renderAll();
+
+      // 입력 후 초기화 및 숨기기
+      tempWorkerFormEl.reset();
+      if (tempWorkerForm) tempWorkerForm.classList.add('hidden');
+    });
+  }
+
 
   // 8) Advanced Filters Event Listeners for Sales
   const applyFilters = () => {
@@ -727,6 +787,7 @@ function initForms() {
   attachAmountFormat('modal-pay-amount');
   attachAmountFormat('debt-pay-amount');
   attachAmountFormat('expense-amount');
+  attachAmountFormat('temp-worker-wage');
 
   // 수정 폼 (수정 모달이 열릴 때 자동으로 이벤트가 걸려있도록)
   attachPhoneFormat('edit-rent-phone');

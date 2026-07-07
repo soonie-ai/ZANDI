@@ -232,6 +232,20 @@ async function pullFromSupabase() {
         ? w.half_daily_wage 
         : Math.round((w.base_daily_wage || 0) * 0.5)
     }));
+
+    // Ensure virtual temp workers exist
+    let hasMale = state.workers.some(w => w.id === 'worker-temp-male');
+    let hasFemale = state.workers.some(w => w.id === 'worker-temp-female');
+    if (!hasMale) {
+      const maleWorker = { id: 'worker-temp-male', name: '남자용역', baseDailyWage: 150000, halfDailyWage: 80000 };
+      state.workers.push(maleWorker);
+      pushWorker(maleWorker);
+    }
+    if (!hasFemale) {
+      const femaleWorker = { id: 'worker-temp-female', name: '여자용역', baseDailyWage: 120000, halfDailyWage: 60000 };
+      state.workers.push(femaleWorker);
+      pushWorker(femaleWorker);
+    }
     state.attendance = att.map(a => ({ 
       id: a.id, 
       workerId: a.worker_id, 

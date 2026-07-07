@@ -601,6 +601,14 @@ window.bulkCollectSales = async function() {
 
 // 4.4. Workers / Attendance View
 function renderAttendance() {
+  // Ensure virtual/temp workers exist in local state
+  if (!state.workers.some(w => w.id === 'worker-temp-male')) {
+    state.workers.push({ id: 'worker-temp-male', name: '남자용역', baseDailyWage: 150000, halfDailyWage: 80000 });
+  }
+  if (!state.workers.some(w => w.id === 'worker-temp-female')) {
+    state.workers.push({ id: 'worker-temp-female', name: '여자용역', baseDailyWage: 120000, halfDailyWage: 60000 });
+  }
+
   const workerList = document.getElementById('worker-list');
   const workersChecklistContainer = document.getElementById('att-workers-list-container');
   const filterWorkerDropdown = document.getElementById('filter-att-worker');
@@ -616,34 +624,37 @@ function renderAttendance() {
   }
 
   state.workers.forEach(worker => {
+    const isTempWorker = worker.id === 'worker-temp-male' || worker.id === 'worker-temp-female';
     const wAtt = state.attendance.filter(a => a.workerId === worker.id);
     const totalDays = wAtt.reduce((sum, item) => sum + Number(item.workType), 0);
     const unpaidWage = wAtt.filter(a => !a.isPaid).reduce((sum, item) => sum + (Number(item.workType) === 0 ? item.dailyWage : item.workType * item.dailyWage), 0);
 
-    const tr = document.createElement('tr');
-    tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
-    tr.innerHTML = `
-      <td class="p-3 text-white font-medium">${worker.name}</td>
-      <td class="p-3 text-emerald-400 font-bold">
-        ${worker.baseDailyWage.toLocaleString()}원 / ${(worker.halfDailyWage || Math.round(worker.baseDailyWage * 0.5)).toLocaleString()}원
-      </td>
-      <td class="p-3 text-gray-300">${totalDays}일</td>
-      <td class="p-3 text-rose-400 font-semibold">${unpaidWage.toLocaleString()}원</td>
-      <td class="p-3 text-center">
-        <div class="flex items-center justify-center gap-2">
-          <button onclick="openWorkerEditModal('${worker.id}')" class="text-emerald-400 hover:text-emerald-300 p-1" title="수정">
-            <i data-lucide="edit-3" class="w-4 h-4"></i>
-          </button>
-          <button onclick="deleteWorker('${worker.id}')" class="text-rose-400 hover:text-rose-300 p-1" title="삭제">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
-        </div>
-      </td>
-    `;
-    workerList.appendChild(tr);
+    if (!isTempWorker) {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
+      tr.innerHTML = `
+        <td class="p-3 text-white font-medium">${worker.name}</td>
+        <td class="p-3 text-emerald-400 font-bold">
+          ${worker.baseDailyWage.toLocaleString()}원 / ${(worker.halfDailyWage || Math.round(worker.baseDailyWage * 0.5)).toLocaleString()}원
+        </td>
+        <td class="p-3 text-gray-300">${totalDays}일</td>
+        <td class="p-3 text-rose-400 font-semibold">${unpaidWage.toLocaleString()}원</td>
+        <td class="p-3 text-center">
+          <div class="flex items-center justify-center gap-2">
+            <button onclick="openWorkerEditModal('${worker.id}')" class="text-emerald-400 hover:text-emerald-300 p-1" title="수정">
+              <i data-lucide="edit-3" class="w-4 h-4"></i>
+            </button>
+            <button onclick="deleteWorker('${worker.id}')" class="text-rose-400 hover:text-rose-300 p-1" title="삭제">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </td>
+      `;
+      workerList.appendChild(tr);
+    }
 
     // checklist checkbox row render
-    if (workersChecklistContainer) {
+    if (workersChecklistContainer && !isTempWorker) {
       const div = document.createElement('div');
       div.className = 'flex flex-col gap-2 bg-black/20 p-2.5 rounded-lg border border-zandiBorder/40 text-xs';
       div.innerHTML = `

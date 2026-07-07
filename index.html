@@ -665,9 +665,9 @@
               </form>
             </div>
 
-            <!-- 2. Daily Log Clock-in -->
-            <div class="glass-panel p-6">
-              <h3 class="text-base font-semibold text-white mb-4">인부 출근/일당 등록</h3>
+             <!-- 2. Daily Log Clock-in -->
+            <div class="glass-panel p-6 space-y-4">
+              <h3 class="text-base font-semibold text-white mb-2">인부 출근/일당 등록</h3>
               <form id="attendance-form" class="space-y-4">
                 <div>
                   <label class="block text-xs text-slate-400 mb-1">근무 날짜 *</label>
@@ -691,6 +691,49 @@
                   출근 대장 등록 <i data-lucide="plus" class="w-4 h-4"></i>
                 </button>
               </form>
+
+              <!-- 용역 추가 토글 및 입력 폼 -->
+              <div class="border-t border-zandiBorder/20 pt-4 mt-2">
+                <button type="button" id="btn-toggle-temp-worker" class="w-full btn-secondary justify-center text-xs py-2 bg-emerald-950/20 text-emerald-400 border border-emerald-500/10 hover:bg-emerald-900/35">
+                  + 용역 추가 <i data-lucide="user-plus" class="w-3.5 h-3.5 ml-1"></i>
+                </button>
+                
+                <form id="temp-worker-form" class="hidden mt-4 space-y-3 p-3 rounded-lg bg-black/35 border border-zandiBorder/20 text-xs">
+                  <div>
+                    <label class="block text-slate-400 mb-1">용역 구분 *</label>
+                    <div class="flex items-center gap-4 py-1">
+                      <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" name="temp-worker-gender" value="male" checked class="text-emerald-400 focus:ring-0">
+                        <span class="text-slate-200">남자용역</span>
+                      </label>
+                      <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" name="temp-worker-gender" value="female" class="text-emerald-400 focus:ring-0">
+                        <span class="text-slate-200">여자용역</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-slate-400 mb-1">지급 금액 (원) *</label>
+                    <input type="text" id="temp-worker-wage" placeholder="예: 150,000" required
+                      class="w-full bg-black/40 border border-zandiBorder text-emerald-400 rounded-lg py-1.5 px-3 focus:outline-none focus:border-zandiPrimary text-sm font-bold">
+                  </div>
+                  <div>
+                    <label class="block text-slate-400 mb-1">비고 (인력소 및 작업 내용) *</label>
+                    <input type="text" id="temp-worker-notes" placeholder="예: 사천인력 / 풀뽑기" required
+                      class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-1.5 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
+                  </div>
+                  <div class="flex items-center justify-between py-1">
+                    <label class="custom-checkbox">
+                      <input type="checkbox" id="temp-worker-paid" checked>
+                      <span class="checkmark"></span>
+                      <span class="text-slate-300">지급 완료</span>
+                    </label>
+                    <button type="submit" class="btn-primary text-xs py-1.5 px-3">
+                      용역 등록
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
 
