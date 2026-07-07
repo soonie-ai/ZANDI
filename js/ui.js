@@ -617,8 +617,37 @@ function renderAttendance() {
   const workerList = document.getElementById('worker-list');
   const workersChecklistContainer = document.getElementById('att-workers-list-container');
   const filterWorkerDropdown = document.getElementById('filter-att-worker');
+  const filterMonthDropdown = document.getElementById('filter-att-month');
   
   const savedFilterWorkerValue = filterWorkerDropdown ? filterWorkerDropdown.value : '';
+
+  // 동적 연월 필터 옵션 채우기
+  if (filterMonthDropdown) {
+    const currentMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    const monthsSet = new Set();
+    state.attendance.forEach(att => {
+      if (att.workDate) {
+        monthsSet.add(att.workDate.slice(0, 7));
+      }
+    });
+    monthsSet.add(currentMonth);
+
+    const sortedMonths = Array.from(monthsSet).sort().reverse();
+    // 기존에 선택된 값 또는 기본 설정된 연월값 매핑
+    const prevVal = filterMonthDropdown.value || attFilters.month || currentMonth;
+
+    filterMonthDropdown.innerHTML = '<option value="">전체 기간</option>';
+    sortedMonths.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      const [year, month] = m.split('-');
+      opt.textContent = `${year}년 ${month}월`;
+      filterMonthDropdown.appendChild(opt);
+    });
+
+    filterMonthDropdown.value = prevVal;
+    attFilters.month = filterMonthDropdown.value;
+  }
 
   workerList.innerHTML = '';
   if (workersChecklistContainer) {
