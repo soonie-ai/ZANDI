@@ -477,8 +477,8 @@ function initForms() {
       const paidInput = document.getElementById('temp-worker-paid');
       const isPaid = paidInput ? paidInput.checked : false;
 
-      if (enteredWage <= 0 || !notes) {
-        alert('금액과 비고(인력소 등)를 정확하게 입력해주세요.');
+      if (enteredWage <= 0) {
+        alert('지급 금액을 정확하게 입력해주세요.');
         return;
       }
 
@@ -849,6 +849,7 @@ function initForms() {
   attachAmountFormat('edit-worker-wage');
   attachAmountFormat('edit-worker-half-wage');
   attachAmountFormat('edit-expense-amount');
+  attachAmountFormat('edit-att-wage');
 
   const rentSearchInput = document.getElementById('filter-rent-search');
   if (rentSearchInput) {
@@ -1157,6 +1158,93 @@ function initForms() {
       await pushSale(sale);
       renderAll();
       document.getElementById('sale-edit-modal').classList.add('hidden');
+    });
+  }
+
+  // 12.5) 인부 출근/용역 수정 폼 처리
+  const editAttendanceForm = document.getElementById('edit-attendance-form');
+  if (editAttendanceForm) {
+    editAttendanceForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('edit-att-id').value;
+      const att = state.attendance.find(a => a.id === id);
+      if (!att) return;
+
+      const workerId = document.getElementById('edit-att-worker').value;
+      const workDate = document.getElementById('edit-att-date').value;
+      const workType = Number(document.getElementById('edit-att-type').value);
+      const enteredWage = Number(document.getElementById('edit-att-wage').value.replace(/,/g, '')) || 0;
+      const notes = document.getElementById('edit-att-notes').value.trim();
+      const isPaid = document.getElementById('edit-att-paid').checked;
+
+      // dailyWage = 입력된 금액 / 근무일수(workType)
+      const dailyWage = workType > 0 ? (enteredWage / workType) : enteredWage;
+
+      att.workerId = workerId;
+      att.workDate = workDate;
+      att.workType = workType;
+      att.dailyWage = dailyWage;
+      att.notes = notes;
+      
+      if (isPaid !== att.isPaid) {
+        att.isPaid = isPaid;
+        att.paidDate = isPaid ? new Date().toISOString().split('T')[0] : '';
+      }
+
+      saveState();
+      await pushAttendance(att);
+      renderAll();
+      document.getElementById('attendance-edit-modal').classList.add('hidden');
+    });
+  }
+
+  const closeAttEditBtn = document.getElementById('close-attendance-edit-modal-btn');
+  if (closeAttEditBtn) {
+    closeAttEditBtn.addEventListener('click', () => {
+      document.getElementById('attendance-edit-modal').classList.add('hidden');
+    });
+  }
+
+  // 인부/용역 선택 변경 시 근무 형태 자동 전환 처리
+  const editAttWorkerSelect = document.getElementById('edit-att-worker');
+  const editAttTypeSelect = document.getElementById('edit-att-type');
+  const editAttWageInput = document.getElementById('edit-att-wage');
+  if (editAttWorkerSelect && editAttTypeSelect && editAttWageInput) {
+    editAttWorkerSelect.addEventListener('change', () => {
+      const workerId = editAttWorkerSelect.value;
+      const worker = state.workers.find(w => w.id === workerId);
+      const isTemp = workerId === 'worker-temp-male' || workerId === 'worker-temp-female';
+      
+      if (isTemp) {
+        editAttTypeSelect.value = '0.0';
+        editAttTypeSelect.disabled = true;
+        if (worker) {
+          editAttWageInput.value = formatAmountInput(String(worker.baseDailyWage));
+        }
+      } else {
+        editAttTypeSelect.disabled = false;
+        if (worker) {
+          editAttTypeSelect.value = '1.0';
+          editAttWageInput.value = formatAmountInput(String(worker.baseDailyWage));
+        }
+      }
+    });
+
+    // 근무 형태 변경 시 기본금액 자동 매핑
+    editAttTypeSelect.addEventListener('change', () => {
+      const workerId = editAttWorkerSelect.value;
+      const worker = state.workers.find(w => w.id === workerId);
+      if (!worker) return;
+
+      const val = Number(editAttTypeSelect.value);
+      if (val === 1.0) {
+        editAttWageInput.value = formatAmountInput(String(worker.baseDailyWage));
+      } else if (val === 0.5) {
+        editAttWageInput.value = formatAmountInput(String(worker.halfDailyWage || Math.round(worker.baseDailyWage * 0.5)));
+      } else if (val === 0.0) {
+        editAttWageInput.value = '';
+        editAttWageInput.focus();
+      }
     });
   }
 

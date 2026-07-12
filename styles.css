@@ -471,6 +471,7 @@ select option {
   #payment-modal > div,
   #customer-edit-modal > div,
   #sale-edit-modal > div,
+  #attendance-edit-modal > div,
   #dash-day-details-modal > div {
     position: fixed !important;
     bottom: 0 !important;

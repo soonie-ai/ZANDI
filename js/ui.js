@@ -220,7 +220,7 @@ window.openDashDayDetailsModal = function(dateStr) {
   const dayAttendance = state.attendance.filter(a => a.workDate === dateStr);
 
   if (dayAttendance.length === 0) {
-    attendanceList.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500 text-xs">해당 날짜의 출근 내역이 없습니다.</td></tr>';
+    attendanceList.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500 text-xs">해당 날짜의 출근 내역이 없습니다.</td></tr>';
   } else {
     dayAttendance.forEach(att => {
       const worker = state.workers.find(w => w.id === att.workerId) || { name: '삭제된 인부' };
@@ -239,6 +239,16 @@ window.openDashDayDetailsModal = function(dateStr) {
             ${att.isPaid ? '지급완료' : '미지급'}
           </span>
           ${att.isPaid && att.paidDate ? `<span class="block text-[9px] text-emerald-500 mt-0.5">${att.paidDate}</span>` : ''}
+        </td>
+        <td class="p-2 text-center">
+          <div class="flex items-center justify-center gap-1.5">
+            <button onclick="openAttendanceEditModal('${att.id}'); document.getElementById('dash-day-details-modal').classList.add('hidden');" class="text-emerald-400 hover:text-emerald-300 p-1" title="수정">
+              <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="deleteAttendance('${att.id}')" class="text-rose-400 hover:text-rose-300 p-1" title="삭제">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
         </td>
       `;
       attendanceList.appendChild(tr);
@@ -988,7 +998,7 @@ function renderAttendanceMatrix() {
           <th class="pb-2 text-right">기준일당</th>
           <th class="pb-2 text-right">정산금액</th>
           <th class="pb-2 text-center">지급여부</th>
-          <th class="pb-2 text-center">삭제</th>
+          <th class="pb-2 text-center">작업</th>
         </tr>
       </thead>
       <tbody>
@@ -1028,9 +1038,14 @@ function renderAttendanceMatrix() {
             ${att.isPaid && att.paidDate ? `<span class="block text-[9px] text-emerald-500 font-semibold mt-0.5">${att.paidDate}</span>` : ''}
           </td>
           <td class="p-3 text-center">
-            <button onclick="deleteAttendance('${att.id}')" class="text-rose-400 hover:text-rose-300 p-1 flex items-center justify-center mx-auto" title="삭제">
-              <i data-lucide="x" class="w-3.5 h-3.5"></i>
-            </button>
+            <div class="flex items-center justify-center gap-2">
+              <button onclick="openAttendanceEditModal('${att.id}')" class="text-emerald-400 hover:text-emerald-300 p-1" title="수정">
+                <i data-lucide="edit-2" class="w-4 h-4"></i>
+              </button>
+              <button onclick="deleteAttendance('${att.id}')" class="text-rose-400 hover:text-rose-300 p-1" title="삭제">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
           </td>
         </tr>
       `;
@@ -1940,6 +1955,41 @@ window.openWorkerEditModal = function(id) {
   document.getElementById('edit-worker-half-wage').value = formatAmountInput(String(worker.halfDailyWage || Math.round((worker.baseDailyWage || 0) * 0.5)));
 
   document.getElementById('worker-edit-modal').classList.remove('hidden');
+};
+
+// Attendance Edit Modal Actions
+window.openAttendanceEditModal = function(id) {
+  const att = state.attendance.find(a => a.id === id);
+  if (!att) return;
+
+  const editAttWorkerSelect = document.getElementById('edit-att-worker');
+  editAttWorkerSelect.innerHTML = '';
+  state.workers.forEach(w => {
+    const opt = document.createElement('option');
+    opt.value = w.id;
+    opt.textContent = w.name;
+    editAttWorkerSelect.appendChild(opt);
+  });
+
+  document.getElementById('edit-att-id').value = att.id;
+  document.getElementById('edit-att-date').value = att.workDate;
+  editAttWorkerSelect.value = att.workerId;
+  
+  const typeSelect = document.getElementById('edit-att-type');
+  typeSelect.value = String(att.workType);
+  
+  // Calculate standard displayed wage amount (entered wage)
+  const payment = Number(att.workType) === 0 ? att.dailyWage : att.workType * att.dailyWage;
+  document.getElementById('edit-att-wage').value = formatAmountInput(String(payment || 0));
+  
+  document.getElementById('edit-att-notes').value = att.notes || '';
+  document.getElementById('edit-att-paid').checked = !!att.isPaid;
+
+  // If worker is temp worker, disable type select and fix to 0.0 (기타)
+  const isTemp = att.workerId === 'worker-temp-male' || att.workerId === 'worker-temp-female';
+  typeSelect.disabled = isTemp;
+
+  document.getElementById('attendance-edit-modal').classList.remove('hidden');
 };
 
 
