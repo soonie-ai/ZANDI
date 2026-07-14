@@ -311,10 +311,17 @@ function renderUnpaidCustomers() {
       tr.innerHTML = `
         <td class="p-2 text-white font-medium">${customer.name}</td>
         <td class="p-2 text-gray-400">${customer.phone || '-'}</td>
-        <td class="p-2 text-right text-rose-400 font-bold">${unpaid.toLocaleString()}원</td>
-        <td class="p-2 text-center">
-          <button onclick="goToSalesTabWithFilter('${customer.id}')" class="text-[10px] text-zandiPrimary hover:text-emerald-400 bg-emerald-950/20 px-2 py-0.5 rounded border border-emerald-500/10 transition-colors">
-            장부 확인
+        <td class="p-2 text-right text-rose-400 font-bold">
+          <span class="cursor-pointer hover:underline text-rose-300 flex items-center justify-end gap-1" onclick="openMonthlyDebtModal('${customer.id}', '${customer.name.replace(/'/g, "\\'")}', ${unpaid})">
+            ${unpaid.toLocaleString()}원 <i data-lucide="eye" class="w-3 h-3 text-rose-400/60 inline"></i>
+          </span>
+        </td>
+        <td class="p-2 text-center flex items-center justify-center gap-1">
+          <button onclick="goToSalesTabWithFilter('${customer.id}')" class="text-[10px] text-zandiPrimary hover:text-emerald-400 bg-emerald-950/20 px-1.5 py-0.5 rounded border border-emerald-500/10 transition-colors" title="전체 장부 보기">
+            장부
+          </button>
+          <button onclick="openMonthlyDebtModal('${customer.id}', '${customer.name.replace(/'/g, "\\'")}', ${unpaid})" class="text-[10px] text-rose-400 hover:text-rose-300 bg-rose-950/20 px-1.5 py-0.5 rounded border border-rose-500/10 transition-colors" title="월별 미수금 보기">
+            월별
           </button>
         </td>
       `;
@@ -404,6 +411,9 @@ function renderCustomers() {
       </td>
       <td class="p-3 text-center">
         <div class="flex items-center justify-center gap-1">
+          <button onclick="openMonthlyDebtModal('${customer.id}', '${customer.name.replace(/'/g, "\\'")}', ${uncollected})" class="text-emerald-400 hover:text-emerald-300 p-1" title="월별 장부 보기">
+            <i data-lucide="calendar" class="w-4 h-4"></i>
+          </button>
           <button onclick="openCustomerEditModal('${customer.id}')" class="text-emerald-400 hover:text-emerald-300 p-1" title="수정">
             <i data-lucide="edit-2" class="w-4 h-4"></i>
           </button>
@@ -2084,8 +2094,15 @@ window.collectDebtFromOlderSales = async function(customerId, payDate, payAmount
     return { sale, total, collected, uncollected };
   }).filter(item => item.uncollected > 0);
   
-  // 3) 판매 일자 기준 오름차순(오래된 날짜 우선)으로 정렬
-  unpaidSales.sort((a, b) => new Date(a.saleDate) - new Date(b.saleDate));
+  // 3) 판매 일자 기준 오름차순(오래된 날짜 우선)으로 정렬 (일자가 같을 경우 ID순으로 고정하여 일관성 보장)
+  unpaidSales.sort((a, b) => {
+    const dateA = new Date(a.sale.saleDate);
+    const dateB = new Date(b.sale.saleDate);
+    if (dateA.getTime() !== dateB.getTime()) {
+      return dateA - dateB;
+    }
+    return a.sale.id.localeCompare(b.sale.id);
+  });
   
   for (const item of unpaidSales) {
     if (remaining <= 0) break;
@@ -2204,8 +2221,8 @@ window.goSalesTabWithFilter = function(customerId, yearMonth) {
     customerDropdown.dispatchEvent(new Event('change'));
   }
 
-  const startDateInput = document.getElementById('filter-sale-start-date');
-  const endDateInput = document.getElementById('filter-sale-end-date');
+  const startDateInput = document.getElementById('filter-sale-start');
+  const endDateInput = document.getElementById('filter-sale-end');
 
   if (yearMonth) {
     const [year, month] = yearMonth.split('-');
