@@ -532,12 +532,42 @@ function renderSales() {
   const salesList = document.getElementById('sales-list');
   salesList.innerHTML = '';
 
+  // YYYY-MM 형식의 모든 고유한 월 목록 추출하여 드롭다운 채우기
+  const filterSaleMonthDropdown = document.getElementById('filter-sale-month');
+  if (filterSaleMonthDropdown) {
+    const savedVal = filterSaleMonthDropdown.value;
+    const months = new Set();
+    state.sales.forEach(sale => {
+      if (sale.saleDate) {
+        months.add(sale.saleDate.substring(0, 7)); // YYYY-MM
+      }
+    });
+    const sortedMonths = Array.from(months).sort().reverse();
+    filterSaleMonthDropdown.innerHTML = '<option value="">전체 기간</option>';
+    sortedMonths.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = `${m.split('-')[0]}년 ${m.split('-')[1]}월`;
+      filterSaleMonthDropdown.appendChild(opt);
+    });
+    filterSaleMonthDropdown.value = savedVal;
+    filters.month = filterSaleMonthDropdown.value;
+  }
+
   // Filter Sales list
   let filteredSales = state.sales.filter(sale => {
     if (filters.customerId && sale.customerId !== filters.customerId) return false;
     if (filters.productType && sale.productType !== filters.productType) return false;
-    if (filters.startDate && sale.saleDate < filters.startDate) return false;
-    if (filters.endDate && sale.saleDate > filters.endDate) return false;
+    
+    // 월별 필터가 있는 경우
+    if (filters.month) {
+      const saleMonth = sale.saleDate.substring(0, 7);
+      if (saleMonth !== filters.month) return false;
+    } else {
+      // 날짜 범위 필터
+      if (filters.startDate && sale.saleDate < filters.startDate) return false;
+      if (filters.endDate && sale.saleDate > filters.endDate) return false;
+    }
     return true;
   });
 
@@ -2283,23 +2313,25 @@ window.goSalesTabWithFilter = function(customerId, yearMonth) {
 
   const startDateInput = document.getElementById('filter-sale-start');
   const endDateInput = document.getElementById('filter-sale-end');
+  const saleMonthSelect = document.getElementById('filter-sale-month');
 
   if (yearMonth) {
-    const [year, month] = yearMonth.split('-');
-    const firstDay = `${yearMonth}-01`;
-    const lastDay = new Date(year, month, 0).getDate();
-    const lastDayStr = `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
-
-    if (startDateInput) startDateInput.value = firstDay;
-    if (endDateInput) endDateInput.value = lastDayStr;
+    // 월별 조회가 직접 매핑되도록 처리
+    if (saleMonthSelect) {
+      saleMonthSelect.value = yearMonth;
+    }
+    if (startDateInput) startDateInput.value = '';
+    if (endDateInput) endDateInput.value = '';
   } else {
+    if (saleMonthSelect) saleMonthSelect.value = '';
     if (startDateInput) startDateInput.value = '';
     if (endDateInput) endDateInput.value = '';
   }
 
   // 3) 필터 상태값 갱신
-  if (startDateInput) filters.startDate = startDateInput.value;
-  if (endDateInput) filters.endDate = endDateInput.value;
+  filters.startDate = startDateInput ? startDateInput.value : '';
+  filters.endDate = endDateInput ? endDateInput.value : '';
+  filters.month = saleMonthSelect ? saleMonthSelect.value : '';
   if (customerDropdown) filters.customerId = customerId;
 
   // 4) 렌더링 갱신

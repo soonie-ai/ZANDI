@@ -510,6 +510,7 @@ function initForms() {
   // 8) Advanced Filters Event Listeners for Sales
   const applyFilters = () => {
     filters.customerId = document.getElementById('filter-sale-customer').value;
+    filters.month = document.getElementById('filter-sale-month').value;
     filters.productType = document.getElementById('filter-sale-type').value;
     filters.startDate = document.getElementById('filter-sale-start').value;
     filters.endDate = document.getElementById('filter-sale-end').value;
@@ -517,9 +518,26 @@ function initForms() {
   };
 
   document.getElementById('filter-sale-customer').addEventListener('change', applyFilters);
+  document.getElementById('filter-sale-month').addEventListener('change', () => {
+    const monthVal = document.getElementById('filter-sale-month').value;
+    if (monthVal) {
+      document.getElementById('filter-sale-start').value = '';
+      document.getElementById('filter-sale-end').value = '';
+    }
+    applyFilters();
+  });
   document.getElementById('filter-sale-type').addEventListener('change', applyFilters);
-  document.getElementById('filter-sale-start').addEventListener('change', applyFilters);
-  document.getElementById('filter-sale-end').addEventListener('change', applyFilters);
+  
+  const handleSaleCustomDateChange = () => {
+    const startDateVal = document.getElementById('filter-sale-start').value;
+    const endDateVal = document.getElementById('filter-sale-end').value;
+    if (startDateVal || endDateVal) {
+      document.getElementById('filter-sale-month').value = '';
+    }
+    applyFilters();
+  };
+  document.getElementById('filter-sale-start').addEventListener('change', handleSaleCustomDateChange);
+  document.getElementById('filter-sale-end').addEventListener('change', handleSaleCustomDateChange);
 
   // 9) Filters Event Listeners for Attendance
   const applyAttFilters = () => {

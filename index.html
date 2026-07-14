@@ -636,11 +636,18 @@
             <h3 class="text-base font-semibold text-white">잔디 출하 및 판매 대장</h3>
             
             <!-- 필터 컨트롤 레이아웃 -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 rounded-xl bg-black/25 border border-zandiBorder/20 text-xs">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 rounded-xl bg-black/25 border border-zandiBorder/20 text-xs">
               <div>
                 <label class="block text-slate-400 mb-1">거래처 필터</label>
                 <select id="filter-sale-customer" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
                   <option value="">전체 거래처</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">월별 조회</label>
+                <select id="filter-sale-month" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
+                  <option value="">전체 기간</option>
+                  <!-- JS로 동적 생성 -->
                 </select>
               </div>
               <div>

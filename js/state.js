@@ -78,7 +78,8 @@ let filters = {
   customerId: '',
   productType: '',
   startDate: '',
-  endDate: ''
+  endDate: '',
+  month: ''
 };
 
 let attFilters = {
