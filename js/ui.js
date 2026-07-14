@@ -2060,16 +2060,68 @@ window.openDebtCollectModal = function(customerId, customerName, uncollectedAmou
   document.getElementById('debt-pay-amount').value = '';
   document.getElementById('debt-pay-amount').max = uncollectedAmount;
   
+  // 미수금이 있는 연월 목록 추출하여 체크박스 구성
+  const monthsContainer = document.getElementById('debt-modal-months-container');
+  if (monthsContainer) {
+    monthsContainer.innerHTML = '';
+    const customer = state.customers.find(c => c.id === customerId);
+    if (customer) {
+      // 1) 기초 미수금 체크박스
+      const initialDebtVal = customer.initialDebt || 0;
+      const initialCollectedVal = customer.initialDebtCollected || 0;
+      const initialUncollected = Math.max(0, initialDebtVal - initialCollectedVal);
+      if (initialUncollected > 0) {
+        const label = document.createElement('label');
+        label.className = 'custom-checkbox flex items-center gap-1 bg-black/40 px-2 py-1 rounded text-xs text-rose-300 font-semibold cursor-pointer border border-rose-500/20';
+        label.innerHTML = `
+          <input type="checkbox" class="debt-modal-month-checkbox" value="initial" checked>
+          <span class="checkmark"></span>
+          <span>이전 이월 (${initialUncollected.toLocaleString()}원)</span>
+        `;
+        monthsContainer.appendChild(label);
+      }
+
+      // 2) 실제 월별 거래 미수금 체크박스
+      const clientSales = state.sales.filter(s => s.customerId === customerId);
+      const monthlyUnpaid = {};
+      clientSales.forEach(sale => {
+        const month = sale.saleDate.substring(0, 7); // YYYY-MM
+        const total = sale.quantity * sale.price;
+        const collected = (sale.payments || []).reduce((sum, p) => sum + p.amount, 0);
+        const unpaid = total - collected;
+        if (unpaid > 0) {
+          monthlyUnpaid[month] = (monthlyUnpaid[month] || 0) + unpaid;
+        }
+      });
+
+      const sortedMonths = Object.keys(monthlyUnpaid).sort();
+      sortedMonths.forEach(m => {
+        const label = document.createElement('label');
+        label.className = 'custom-checkbox flex items-center gap-1 bg-black/40 px-2 py-1 rounded text-xs text-slate-300 cursor-pointer border border-zandiBorder/40';
+        label.innerHTML = `
+          <input type="checkbox" class="debt-modal-month-checkbox" value="${m}" checked>
+          <span class="checkmark"></span>
+          <span>${m} (${monthlyUnpaid[m].toLocaleString()}원)</span>
+        `;
+        monthsContainer.appendChild(label);
+      });
+    }
+  }
+
   document.getElementById('debt-collect-modal').classList.remove('hidden');
 };
 
-window.collectDebtFromOlderSales = async function(customerId, payDate, payAmount) {
+window.collectDebtFromOlderSales = async function(customerId, payDate, payAmount, selectedMonths = []) {
   let remaining = payAmount;
   let updatedCount = 0;
 
-  // 0) 기초 미수금(이전 미수 잔액) 우선 차감
+  // selectedMonths가 완전히 비어있다는 것은 아무것도 선택하지 않은 것이 아니라, 전체 체크 상황 또는 체크박스가 제공되지 않은 상황일 수 있으므로 전체 기간 허용으로 처리하거나,
+  // 체크박스 리스트 중 선택되지 않은 것만 제외하는 하이브리드 체크 방식이 적합합니다.
+  const hasSelectedFilter = selectedMonths && selectedMonths.length > 0;
+
+  // 0) 기초 미수금(이전 미수 잔액) 우선 차감 (selectedMonths가 제공되었고 initial이 들어있거나, 필터가 없을 때 진행)
   const customer = state.customers.find(c => c.id === customerId);
-  if (customer) {
+  if (customer && (!hasSelectedFilter || selectedMonths.includes('initial'))) {
     const initialDebtVal = customer.initialDebt || 0;
     const initialCollectedVal = customer.initialDebtCollected || 0;
     const initialUncollected = Math.max(0, initialDebtVal - initialCollectedVal);
@@ -2087,12 +2139,20 @@ window.collectDebtFromOlderSales = async function(customerId, payDate, payAmount
   const clientSales = state.sales.filter(s => s.customerId === customerId);
   
   // 2) 미납이 남아 있는 거래들만 추출
-  const unpaidSales = clientSales.map(sale => {
+  let unpaidSales = clientSales.map(sale => {
     const total = sale.quantity * sale.price;
     const collected = (sale.payments || []).reduce((sum, p) => sum + p.amount, 0);
     const uncollected = total - collected;
     return { sale, total, collected, uncollected };
   }).filter(item => item.uncollected > 0);
+
+  // 만약 특정 달들을 체크했다면, 체크된 달에 해당하는 매출 데이터만 차감 대상으로 선별
+  if (hasSelectedFilter) {
+    unpaidSales = unpaidSales.filter(item => {
+      const saleMonth = item.sale.saleDate.substring(0, 7); // YYYY-MM
+      return selectedMonths.includes(saleMonth);
+    });
+  }
   
   // 3) 판매 일자 기준 오름차순(오래된 날짜 우선)으로 정렬 (일자가 같을 경우 ID순으로 고정하여 일관성 보장)
   unpaidSales.sort((a, b) => {

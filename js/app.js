@@ -758,7 +758,11 @@ function initForms() {
       
       if (!customerId || !date || amount <= 0) return;
       
-      await collectDebtFromOlderSales(customerId, date, amount);
+      // 선택된 체크박스 월 정보 취합
+      const selectedCheckboxes = document.querySelectorAll('.debt-modal-month-checkbox:checked');
+      const selectedMonths = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+      await collectDebtFromOlderSales(customerId, date, amount, selectedMonths);
       document.getElementById('debt-collect-modal').classList.add('hidden');
     });
   }

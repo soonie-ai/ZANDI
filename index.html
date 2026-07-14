@@ -1346,12 +1346,18 @@
             </div>
           </div>
           <div>
+            <label class="block text-xs text-slate-400 mb-1">입금 대상 연월 선택 (미선택 시 전체 기간 오래된 순 차감)</label>
+            <div id="debt-modal-months-container" class="flex flex-wrap gap-2 bg-black/25 p-2.5 rounded-lg border border-zandiBorder/20 max-h-[100px] overflow-y-auto">
+              <!-- JS가 동적으로 미수금이 있는 월들을 체크박스로 생성 -->
+            </div>
+          </div>
+          <div>
             <label class="block text-xs text-slate-400 mb-1">입금 금액(원)</label>
             <input type="number" id="debt-pay-amount" required placeholder="금액 입력" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg py-2 px-3 focus:outline-none focus:border-zandiPrimary text-sm">
           </div>
-          <p class="text-[10px] text-slate-500">※ 입력한 입금액만큼 가장 오래된 미수 거래 건부터 순서대로 자동 수금 처리(차감)됩니다.</p>
+          <p class="text-[10px] text-slate-500">※ 체크한 연월의 미수 거래 건부터 오래된 순서대로 차감 처리됩니다.</p>
           <button type="submit" class="w-full btn-primary justify-center text-sm py-2">
-            이월 입금 처리 완료 <i data-lucide="check" class="w-4 h-4"></i>
+            입금 처리 완료 <i data-lucide="check" class="w-4 h-4"></i>
           </button>
         </form>
       </div>
