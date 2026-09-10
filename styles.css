@@ -714,10 +714,13 @@ select option {
     table-layout: fixed !important;
     border-collapse: collapse !important;
     color: black !important;
+    zoom: var(--print-scale, 0.82) !important; /* 브라우저 인쇄 배율을 자동 축소하여 1장에 강제 수납 */
+    transform-origin: top left !important;
   }
 
   #rent-main-table tr {
     page-break-inside: avoid !important;
+    page-break-after: auto !important;
   }
 
   /* 컬럼별 최적화된 너비 및 정렬 규격 */

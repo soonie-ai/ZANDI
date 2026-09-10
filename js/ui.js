@@ -2318,6 +2318,25 @@ window.printRentLandscape = function() {
     printDate.textContent = `출력 일시: ${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
   }
 
+  // 1.5) 인쇄 대상 행 수에 따른 동적 자동 1페이지 맞춤 배율 계산
+  const visibleRows = document.querySelectorAll('#rent-list tr:not(.print-exclude)');
+  const rowCount = visibleRows.length;
+  const tableEl = document.getElementById('rent-main-table');
+
+  // 행 수가 18행을 넘어가면 1페이지 안에 모두 들어가도록 자동 축소 비율 계산
+  let scaleRatio = 1.0;
+  if (rowCount > 24) {
+    scaleRatio = 0.78;
+  } else if (rowCount > 20) {
+    scaleRatio = 0.84;
+  } else if (rowCount > 16) {
+    scaleRatio = 0.90;
+  }
+
+  if (tableEl) {
+    tableEl.style.setProperty('--print-scale', String(scaleRatio));
+  }
+
   // 2) 브라우저 기본 인쇄 실행 (css의 @media print에서 가로 세팅 자동 적용)
   window.print();
 };
