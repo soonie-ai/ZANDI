@@ -1294,24 +1294,6 @@ function renderRent() {
         <td class="p-3 text-center text-gray-300 col-area">${rent.area ? rent.area + '평' : '-'}</td>
         <td class="p-3 text-right text-emerald-400 font-bold col-amount">${Number(rent.amount).toLocaleString()}원</td>
         <td class="p-3 text-gray-300 col-account truncate" title="${rent.bankAccount || ''}">${rent.bankAccount || '-'}</td>
-        <td class="p-3 text-center print-hide">
-          <label class="custom-checkbox inline-block">
-            <input type="checkbox" ${payPrev ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '${yearPrev}')">
-            <span class="checkmark"></span>
-          </label>
-        </td>
-        <td class="p-3 text-center print-hide">
-          <label class="custom-checkbox inline-block">
-            <input type="checkbox" ${payCurr ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '${yearCurr}')">
-            <span class="checkmark"></span>
-          </label>
-        </td>
-        <td class="p-3 text-center print-hide">
-          <label class="custom-checkbox inline-block">
-            <input type="checkbox" ${payNext ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '${yearNext}')">
-            <span class="checkmark"></span>
-          </label>
-        </td>
         <td class="p-3 text-gray-400 print-hide">${rent.paymentDate || '-'}</td>
         <td class="p-3 text-gray-400 max-w-[120px] truncate print-hide" title="${rent.notes || ''}">${rent.notes || '-'}</td>
         <td class="p-3 text-center no-print">
