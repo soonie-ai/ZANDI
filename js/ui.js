@@ -1784,22 +1784,27 @@ window.openWorkerUnpaidModal = function(workerId) {
         const tr = document.createElement('tr');
         tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
         tr.innerHTML = `
+          <td class="p-2.5 pl-2">
+            <label class="custom-checkbox">
+              <input type="checkbox" class="unpaid-modal-item-check" value="${att.id}" onchange="updateUnpaidModalCheckedSummary()">
+              <span class="checkmark"></span>
+            </label>
+          </td>
           <td class="p-2.5 text-white font-medium flex items-center gap-1.5">
             <i data-lucide="calendar" class="w-3.5 h-3.5 text-emerald-400"></i>
             <span>${att.workDate}</span>
           </td>
           <td class="p-2.5 text-center">${typeBadge}</td>
-          <td class="p-2.5 text-right font-bold text-rose-400">${amt.toLocaleString()}원</td>
-          <td class="p-2.5 text-center">
-            <button type="button" onclick="paySingleAttendanceFromModal('${att.id}', '${workerId}')" class="btn-primary text-[11px] py-1 px-2 rounded flex items-center justify-center gap-1 mx-auto">
-              <i data-lucide="check" class="w-3 h-3"></i> 지급완료
-            </button>
-          </td>
+          <td class="p-2.5 text-right pr-2 font-bold text-rose-400">${amt.toLocaleString()}원</td>
         `;
         listEl.appendChild(tr);
       });
     }
   }
+
+  const selectAllCb = document.getElementById('unpaid-modal-select-all');
+  if (selectAllCb) selectAllCb.checked = false;
+  updateUnpaidModalCheckedSummary();
 
   const payAllBtn = document.getElementById('btn-pay-all-unpaid-worker');
   if (payAllBtn) {
@@ -1816,16 +1821,75 @@ window.closeWorkerUnpaidModal = function() {
   currentUnpaidWorkerId = null;
 };
 
-window.paySingleAttendanceFromModal = async function(attId, workerId) {
-  const att = state.attendance.find(a => a.id === attId);
-  if (!att) return;
-  att.isPaid = true;
-  att.paidDate = new Date().toISOString().split('T')[0];
+window.toggleAllUnpaidModalSelects = function(master) {
+  const checkboxes = document.querySelectorAll('.unpaid-modal-item-check');
+  checkboxes.forEach(cb => {
+    cb.checked = master.checked;
+  });
+  updateUnpaidModalCheckedSummary();
+};
+
+window.updateUnpaidModalCheckedSummary = function() {
+  const checkedBoxes = document.querySelectorAll('.unpaid-modal-item-check:checked');
+  const count = checkedBoxes.length;
+  let totalAmount = 0;
+
+  checkedBoxes.forEach(cb => {
+    const att = state.attendance.find(a => a.id === cb.value);
+    if (att) {
+      const wType = Number(att.workType);
+      const amt = (wType === 0 ? Number(att.dailyWage) : wType * Number(att.dailyWage));
+      totalAmount += amt;
+    }
+  });
+
+  const summaryEl = document.getElementById('unpaid-modal-checked-summary');
+  if (summaryEl) {
+    summaryEl.textContent = `${count}건 (${totalAmount.toLocaleString()}원)`;
+  }
+};
+
+window.payCheckedUnpaidWorker = async function() {
+  if (!currentUnpaidWorkerId) return;
+  const checkedBoxes = document.querySelectorAll('.unpaid-modal-item-check:checked');
+  if (checkedBoxes.length === 0) {
+    showToast('정산 완료 처리할 출근 내역을 먼저 체크해주세요.', 'info');
+    return;
+  }
+
+  const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+  const targetEntries = state.attendance.filter(att => selectedIds.includes(att.id) && !att.isPaid);
+
+  if (targetEntries.length === 0) {
+    showToast('선택한 내역 중 미지급 상태인 항목이 없습니다.', 'info');
+    return;
+  }
+
+  const worker = state.workers.find(w => w.id === currentUnpaidWorkerId);
+  const workerName = worker ? worker.name : '인부';
+
+  if (!confirm(`'${workerName}' 인부의 선택한 출근 내역 ${targetEntries.length}건을 지급 완료 처리하시겠습니까?`)) {
+    return;
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  for (const att of targetEntries) {
+    att.isPaid = true;
+    att.paidDate = todayStr;
+    pushAttendance(att);
+  }
+
   saveState();
-  pushAttendance(att);
-  showToast('지급 완료 처리되었습니다.', 'success');
+  showToast(`선택한 ${targetEntries.length}건의 출근 내역이 정산 완료 처리되었습니다.`, 'success');
   renderAll();
-  openWorkerUnpaidModal(workerId);
+
+  // 남아있는 미지급 내역이 있는지 확인
+  const remaining = state.attendance.filter(a => a.workerId === currentUnpaidWorkerId && !a.isPaid);
+  if (remaining.length > 0) {
+    openWorkerUnpaidModal(currentUnpaidWorkerId);
+  } else {
+    closeWorkerUnpaidModal();
+  }
 };
 
 window.payAllUnpaidForWorker = async function(workerId) {
@@ -1838,7 +1902,7 @@ window.payAllUnpaidForWorker = async function(workerId) {
     return;
   }
 
-  if (!confirm(`'${workerName}' 인부의 미지급 내역 총 ${unpaidAtts.length}건을 모두 지급 완료 처리하시겠습니까?`)) {
+  if (!confirm(`'${workerName}' 인부의 전체 미지급 내역 ${unpaidAtts.length}건을 모두 일괄 정산완료 처리하시겠습니까?`)) {
     return;
   }
 
@@ -1850,7 +1914,7 @@ window.payAllUnpaidForWorker = async function(workerId) {
   }
 
   saveState();
-  showToast(`'${workerName}' 인부의 출근 내역 ${unpaidAtts.length}건이 지급 완료 처리되었습니다.`, 'success');
+  showToast(`'${workerName}' 인부의 미지급 내역 ${unpaidAtts.length}건이 모두 일괄 정산되었습니다.`, 'success');
   renderAll();
   closeWorkerUnpaidModal();
 };
