@@ -1285,7 +1285,7 @@ function renderRent() {
         </td>
         <td class="p-3 text-center col-pay-date">
           <div class="print-pay-box">
-            ${rent.paymentDate ? `<span class="text-[11px] text-gray-300 font-medium">${rent.paymentDate}</span>` : `<span class="print-empty-box"></span>`}
+            <span class="print-empty-box"></span>
           </div>
         </td>
         <td class="p-3 text-white font-medium pl-2 col-owner">${rent.ownerName || '-'}</td>
@@ -1294,7 +1294,6 @@ function renderRent() {
         <td class="p-3 text-center text-gray-300 col-area">${rent.area ? rent.area + '평' : '-'}</td>
         <td class="p-3 text-right text-emerald-400 font-bold col-amount">${Number(rent.amount).toLocaleString()}원</td>
         <td class="p-3 text-gray-300 col-account truncate" title="${rent.bankAccount || ''}">${rent.bankAccount || '-'}</td>
-        <td class="p-3 text-gray-400 print-hide">${rent.paymentDate || '-'}</td>
         <td class="p-3 text-gray-400 max-w-[120px] truncate print-hide" title="${rent.notes || ''}">${rent.notes || '-'}</td>
         <td class="p-3 text-center no-print">
           <div class="flex items-center justify-center gap-1.5">
