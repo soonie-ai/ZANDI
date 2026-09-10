@@ -777,6 +777,25 @@ function renderAttendance() {
     const unpaidWage = wAtt.filter(a => !a.isPaid).reduce((sum, item) => sum + (Number(item.workType) === 0 ? item.dailyWage : item.workType * item.dailyWage), 0);
 
     if (!isTempWorker) {
+      const unpaidAtts = wAtt.filter(a => !a.isPaid);
+      const unpaidFullCount = unpaidAtts.filter(a => Number(a.workType) === 1.0).length;
+      const unpaidHalfCount = unpaidAtts.filter(a => Number(a.workType) === 0.5).length;
+      const unpaidOtherCount = unpaidAtts.filter(a => Number(a.workType) === 0.0).length;
+
+      let unpaidDetailBadge = '';
+      if (unpaidAtts.length > 0) {
+        let parts = [];
+        if (unpaidFullCount > 0) parts.push(`하루 ${unpaidFullCount}`);
+        if (unpaidHalfCount > 0) parts.push(`반나절 ${unpaidHalfCount}`);
+        if (unpaidOtherCount > 0) parts.push(`기타 ${unpaidOtherCount}`);
+        unpaidDetailBadge = `
+          <button type="button" onclick="openWorkerUnpaidModal('${worker.id}')" class="inline-flex items-center gap-1 ml-1.5 px-2 py-0.5 rounded-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-[10px] font-semibold transition-colors cursor-pointer" title="미지급 상세 내역(날짜/근무형태) 확인">
+            <i data-lucide="calendar-clock" class="w-3 h-3 text-rose-400"></i>
+            <span>${parts.join(', ')}</span>
+          </button>
+        `;
+      }
+
       const tr = document.createElement('tr');
       tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
       tr.innerHTML = `
@@ -785,7 +804,12 @@ function renderAttendance() {
           ${worker.baseDailyWage.toLocaleString()}원 / ${(worker.halfDailyWage || Math.round(worker.baseDailyWage * 0.5)).toLocaleString()}원
         </td>
         <td class="p-3 text-gray-300">${totalDays}일</td>
-        <td class="p-3 text-rose-400 font-semibold">${unpaidWage.toLocaleString()}원</td>
+        <td class="p-3">
+          <div class="flex items-center flex-wrap gap-1">
+            <span class="text-rose-400 font-semibold">${unpaidWage.toLocaleString()}원</span>
+            ${unpaidDetailBadge}
+          </div>
+        </td>
         <td class="p-3 text-center">
           <div class="flex items-center justify-center gap-2">
             <button onclick="openWorkerEditModal('${worker.id}')" class="text-emerald-400 hover:text-emerald-300 p-1" title="수정">
@@ -1695,6 +1719,140 @@ window.openSaleNoteModal = function(notes) {
 window.closeSaleNoteModal = function() {
   const modal = document.getElementById('sale-note-modal');
   if (modal) modal.classList.add('hidden');
+};
+
+let currentUnpaidWorkerId = null;
+
+window.openWorkerUnpaidModal = function(workerId) {
+  currentUnpaidWorkerId = workerId;
+  const modal = document.getElementById('worker-unpaid-modal');
+  if (!modal) return;
+
+  const worker = state.workers.find(w => w.id === workerId);
+  if (!worker) return;
+
+  const titleEl = document.getElementById('unpaid-modal-title');
+  if (titleEl) titleEl.textContent = `'${worker.name}' 미지급 인건비 상세`;
+
+  const unpaidAtts = (state.attendance || [])
+    .filter(a => a.workerId === workerId && !a.isPaid)
+    .sort((a, b) => new Date(b.workDate) - new Date(a.workDate));
+
+  let fullCount = 0;
+  let halfCount = 0;
+  let otherCount = 0;
+  let totalAmount = 0;
+
+  unpaidAtts.forEach(a => {
+    const wType = Number(a.workType);
+    if (wType === 1.0) fullCount++;
+    else if (wType === 0.5) halfCount++;
+    else otherCount++;
+
+    const amt = (wType === 0 ? Number(a.dailyWage) : wType * Number(a.dailyWage));
+    totalAmount += amt;
+  });
+
+  const countEl = document.getElementById('unpaid-modal-count');
+  const typesEl = document.getElementById('unpaid-modal-types');
+  const amountEl = document.getElementById('unpaid-modal-amount');
+
+  if (countEl) countEl.textContent = `${unpaidAtts.length}건`;
+  if (typesEl) {
+    let typeTxt = `하루 ${fullCount}회 / 반나절 ${halfCount}회`;
+    if (otherCount > 0) typeTxt += ` (기타 ${otherCount}회)`;
+    typesEl.textContent = typeTxt;
+  }
+  if (amountEl) amountEl.textContent = `${totalAmount.toLocaleString()}원`;
+
+  const listEl = document.getElementById('worker-unpaid-list');
+  if (listEl) {
+    listEl.innerHTML = '';
+    if (unpaidAtts.length === 0) {
+      listEl.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-500 text-xs">미지급된 출근 내역이 없습니다.</td></tr>';
+    } else {
+      unpaidAtts.forEach(att => {
+        const wType = Number(att.workType);
+        const typeBadge = wType === 1.0 
+          ? '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">하루(1.0)</span>'
+          : (wType === 0.5 
+            ? '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">반나절(0.5)</span>'
+            : `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">기타${att.notes ? ` (${att.notes})` : ''}</span>`);
+        
+        const amt = (wType === 0 ? Number(att.dailyWage) : wType * Number(att.dailyWage));
+
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-gray-800 hover:bg-emerald-950/20';
+        tr.innerHTML = `
+          <td class="p-2.5 text-white font-medium flex items-center gap-1.5">
+            <i data-lucide="calendar" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>${att.workDate}</span>
+          </td>
+          <td class="p-2.5 text-center">${typeBadge}</td>
+          <td class="p-2.5 text-right font-bold text-rose-400">${amt.toLocaleString()}원</td>
+          <td class="p-2.5 text-center">
+            <button type="button" onclick="paySingleAttendanceFromModal('${att.id}', '${workerId}')" class="btn-primary text-[11px] py-1 px-2 rounded flex items-center justify-center gap-1 mx-auto">
+              <i data-lucide="check" class="w-3 h-3"></i> 지급완료
+            </button>
+          </td>
+        `;
+        listEl.appendChild(tr);
+      });
+    }
+  }
+
+  const payAllBtn = document.getElementById('btn-pay-all-unpaid-worker');
+  if (payAllBtn) {
+    payAllBtn.onclick = () => payAllUnpaidForWorker(workerId);
+  }
+
+  modal.classList.remove('hidden');
+  if (window.lucide) window.lucide.createIcons();
+};
+
+window.closeWorkerUnpaidModal = function() {
+  const modal = document.getElementById('worker-unpaid-modal');
+  if (modal) modal.classList.add('hidden');
+  currentUnpaidWorkerId = null;
+};
+
+window.paySingleAttendanceFromModal = async function(attId, workerId) {
+  const att = state.attendance.find(a => a.id === attId);
+  if (!att) return;
+  att.isPaid = true;
+  att.paidDate = new Date().toISOString().split('T')[0];
+  saveState();
+  pushAttendance(att);
+  showToast('지급 완료 처리되었습니다.', 'success');
+  renderAll();
+  openWorkerUnpaidModal(workerId);
+};
+
+window.payAllUnpaidForWorker = async function(workerId) {
+  const worker = state.workers.find(w => w.id === workerId);
+  const workerName = worker ? worker.name : '인부';
+  const unpaidAtts = (state.attendance || []).filter(a => a.workerId === workerId && !a.isPaid);
+
+  if (unpaidAtts.length === 0) {
+    showToast('지급 처리할 미지급 내역이 없습니다.', 'info');
+    return;
+  }
+
+  if (!confirm(`'${workerName}' 인부의 미지급 내역 총 ${unpaidAtts.length}건을 모두 지급 완료 처리하시겠습니까?`)) {
+    return;
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  for (const att of unpaidAtts) {
+    att.isPaid = true;
+    att.paidDate = todayStr;
+    pushAttendance(att);
+  }
+
+  saveState();
+  showToast(`'${workerName}' 인부의 출근 내역 ${unpaidAtts.length}건이 지급 완료 처리되었습니다.`, 'success');
+  renderAll();
+  closeWorkerUnpaidModal();
 };
 
 function renderAll() {
