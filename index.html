@@ -1064,10 +1064,9 @@
 
         <!-- 임대 장부 테이블 본문 -->
         <div class="glass-panel p-6 space-y-4 relative overflow-hidden" id="rent-table-panel">
-          <!-- 프린트용 헤더 (화면에서는 안보임) -->
-          <div class="print-only mb-6 hidden">
-            <h1 class="text-2xl font-bold text-center text-black" id="print-document-title">토지 임대료 관리 장부</h1>
-            <p class="text-right text-xs text-slate-600 mt-2" id="print-date-info"></p>
+          <!-- 프린트용 헤더: 상단 여백 최소화 및 사용자 요청으로 대제목 제거하고 우측 상단 출력일시만 간결하게 표시 -->
+          <div class="print-only mb-2 hidden">
+            <p class="text-right text-[10px] text-slate-600 font-medium" id="print-date-info"></p>
           </div>
 
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
@@ -1115,12 +1114,13 @@
                       <span class="checkmark"></span>
                     </label>
                   </th>
-                  <th class="pb-2 pl-2">임대인</th>
-                  <th class="pb-2">휴대번호</th>
-                  <th class="pb-2">주소</th>
-                  <th class="pb-2 text-center">평수</th>
-                  <th class="pb-2 text-right">임대료</th>
-                  <th class="pb-2">계좌번호</th>
+                  <th class="pb-2 text-center col-pay-date">지급일자</th>
+                  <th class="pb-2 pl-2 col-owner">임대인</th>
+                  <th class="pb-2 col-phone">휴대번호</th>
+                  <th class="pb-2 col-address">주소</th>
+                  <th class="pb-2 text-center col-area">평수</th>
+                  <th class="pb-2 text-right col-amount">임대료</th>
+                  <th class="pb-2 col-account">계좌번호</th>
                   <th class="pb-2 text-center print-hide" id="rent-header-year-prev">작년</th>
                   <th class="pb-2 text-center print-hide" id="rent-header-year-curr">올해</th>
                   <th class="pb-2 text-center print-hide" id="rent-header-year-next">내년</th>

@@ -607,6 +607,23 @@ select option {
   display: none;
 }
 
+/* 임대 장부 지급일자 기입 상자 스타일 */
+.print-pay-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 22px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+}
+.print-empty-box {
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+}
+
 /* 등록 팝업 모바일 스타일 별도 지정 */
 #rent-register-modal > div {
   max-width: 500px !important;
@@ -632,7 +649,7 @@ select option {
 @media print {
   @page {
     size: A4 landscape;
-    margin: 10mm 15mm;
+    margin: 8mm 10mm;
   }
   
   /* 모든 요소의 배경 이미지, 그림자 제거 */
@@ -679,40 +696,120 @@ select option {
     display: block !important;
   }
 
-  /* 프린트 전용 헤더 보이기 */
+  /* 프린트 전용 헤더 */
   .print-only {
     display: block !important;
     color: black !important;
+    margin-bottom: 4px !important;
   }
 
   #print-document-title {
-    color: black !important;
-    font-size: 18pt !important;
-    font-weight: bold !important;
-    border-bottom: 2px solid black;
-    padding-bottom: 5px;
+    display: none !important; /* 상단 불필요한 제목 제거하여 상단 여백 확보 */
   }
 
-  /* 테이블 스타일 흑백/고대비로 변환 */
-  table {
+  #print-date-info {
+    font-size: 8pt !important;
+    color: #555 !important;
+    margin: 0 0 4px 0 !important;
+    text-align: right !important;
+  }
+
+  /* 테이블 스타일: 고정 레이아웃으로 가로 넘침 방지 및 여백 최적화 */
+  #rent-main-table {
     width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
     border-collapse: collapse !important;
     color: black !important;
   }
 
-  th, td {
-    border: 1px solid #ddd !important;
-    padding: 6px 4px !important;
-    color: black !important;
-    font-size: 8.5pt !important;
+  /* 컬럼별 최적화된 너비 및 정렬 규격 */
+  #rent-main-table .col-pay-date {
+    width: 80px !important;
+    text-align: center !important;
+  }
+
+  #rent-main-table .col-owner {
+    width: 110px !important;
+    text-align: left !important;
+    padding-left: 8px !important;
+    font-weight: bold !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     white-space: nowrap !important;
+  }
+
+  #rent-main-table .col-phone {
+    width: 115px !important;
+    text-align: center !important;
+  }
+
+  #rent-main-table .col-address {
+    width: auto !important; /* 주소는 유동적으로 남은 너비 활용 */
+    text-align: left !important;
+    padding-left: 6px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  #rent-main-table .col-area {
+    width: 60px !important;
+    text-align: center !important;
+  }
+
+  #rent-main-table .col-amount {
+    width: 100px !important;
+    text-align: right !important;
+    padding-right: 8px !important;
+    font-weight: bold !important;
+  }
+
+  #rent-main-table .col-account {
+    width: 190px !important;
+    text-align: left !important;
+    padding-left: 6px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  /* 인쇄용 지급일자 상자 (수기 기입 상자 또는 전산 입력일) */
+  .print-pay-box {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 68px !important;
+    height: 18px !important;
+    border: 1px solid #777 !important;
+    background: #fafafa !important;
+    border-radius: 2px !important;
+    margin: 0 auto !important;
+    font-size: 7.5pt !important;
+    line-height: 1 !important;
+  }
+
+  .print-empty-box {
+    display: inline-block !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  th, td {
+    border: 1px solid #bbb !important;
+    padding: 4.5px 3px !important;
+    color: black !important;
+    font-size: 8pt !important;
     background: transparent !important;
+    vertical-align: middle !important;
   }
 
   th {
-    background-color: #f2f2f2 !important;
-    font-weight: bold !important;
+    background-color: #eaeaea !important;
+    font-weight: 700 !important;
     text-align: center !important;
+    font-size: 8.5pt !important;
+    padding: 5px 3px !important;
   }
 
   td.text-right {
@@ -735,14 +832,14 @@ select option {
   .custom-checkbox input[type="checkbox"]:checked + .checkmark::after {
     content: "■" !important;
     color: black !important;
-    font-size: 10pt !important;
+    font-size: 9pt !important;
     position: static !important;
     display: inline-block !important;
   }
   .custom-checkbox input[type="checkbox"]:not(:checked) + .checkmark::after {
     content: "□" !important;
     color: #999 !important;
-    font-size: 10pt !important;
+    font-size: 9pt !important;
     position: static !important;
     display: inline-block !important;
   }

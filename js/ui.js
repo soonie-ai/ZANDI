@@ -1283,12 +1283,17 @@ function renderRent() {
             <span class="checkmark"></span>
           </label>
         </td>
-        <td class="p-3 text-white font-medium pl-2">${rent.ownerName || '-'}</td>
-        <td class="p-3 text-gray-300">${rent.phone || '-'}</td>
-        <td class="p-3 text-gray-300 max-w-[150px] truncate" title="${rent.address || ''}">${rent.address || '-'}</td>
-        <td class="p-3 text-center text-gray-300">${rent.area ? rent.area + '평' : '-'}</td>
-        <td class="p-3 text-right text-emerald-400 font-bold">${Number(rent.amount).toLocaleString()}원</td>
-        <td class="p-3 text-gray-300 max-w-[120px] truncate" title="${rent.bankAccount || ''}">${rent.bankAccount || '-'}</td>
+        <td class="p-3 text-center col-pay-date">
+          <div class="print-pay-box">
+            ${rent.paymentDate ? `<span class="text-[11px] text-gray-300 font-medium">${rent.paymentDate}</span>` : `<span class="print-empty-box"></span>`}
+          </div>
+        </td>
+        <td class="p-3 text-white font-medium pl-2 col-owner">${rent.ownerName || '-'}</td>
+        <td class="p-3 text-gray-300 col-phone">${rent.phone || '-'}</td>
+        <td class="p-3 text-gray-300 col-address truncate" title="${rent.address || ''}">${rent.address || '-'}</td>
+        <td class="p-3 text-center text-gray-300 col-area">${rent.area ? rent.area + '평' : '-'}</td>
+        <td class="p-3 text-right text-emerald-400 font-bold col-amount">${Number(rent.amount).toLocaleString()}원</td>
+        <td class="p-3 text-gray-300 col-account truncate" title="${rent.bankAccount || ''}">${rent.bankAccount || '-'}</td>
         <td class="p-3 text-center print-hide">
           <label class="custom-checkbox inline-block">
             <input type="checkbox" ${payPrev ? 'checked' : ''} onchange="toggleRentYear('${rent.id}', '${yearPrev}')">
