@@ -928,12 +928,14 @@
                   <div class="flex flex-wrap gap-x-3 gap-y-1 pr-3 border-r border-emerald-500/20">
                     <span class="text-slate-400">필터합계:</span>
                     <span>출근: <strong class="text-white" id="filter-att-count">0건</strong></span>
+                    <span>(하루: <strong class="text-emerald-400" id="filter-att-full-count">0회</strong> / 반나절: <strong class="text-amber-400" id="filter-att-half-count">0회</strong>)</span>
                     <span>일수: <strong class="text-zandiPrimary" id="filter-att-days">0일</strong></span>
                     <span>인건비: <strong class="text-emerald-400 font-bold" id="filter-att-amount">0원</strong></span>
                   </div>
                   <div class="flex flex-wrap gap-x-3 gap-y-1 pl-1">
                     <span class="text-rose-400 font-medium">선택합계:</span>
                     <span>선택: <strong class="text-white" id="checked-att-count">0건</strong></span>
+                    <span>(하루: <strong class="text-emerald-400" id="checked-att-full-count">0회</strong> / 반나절: <strong class="text-amber-400" id="checked-att-half-count">0회</strong>)</span>
                     <span>일수: <strong class="text-zandiPrimary" id="checked-att-days">0일</strong></span>
                     <span>금액: <strong class="text-rose-400 font-bold" id="checked-att-amount">0원</strong></span>
                   </div>
@@ -1892,10 +1894,12 @@
         </div>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm min-w-[500px]">
+        <table class="w-full text-left text-sm min-w-[600px]">
           <thead>
             <tr class="text-xs text-zandiTextMuted border-b border-zandiBorder/40">
               <th class="pb-2 pl-2">인부명</th>
+              <th class="pb-2 text-center">하루(1.0)</th>
+              <th class="pb-2 text-center">반나절(0.5)</th>
               <th class="pb-2 text-center">총 근무일수</th>
               <th class="pb-2 text-right">총 인건비</th>
               <th class="pb-2 text-right">지급 완료 금액</th>
@@ -1908,6 +1912,8 @@
           <tfoot>
             <tr class="border-t border-zandiBorder/60 bg-black/30 font-bold text-xs text-white">
               <td class="p-3 pl-2">총합</td>
+              <td id="monthly-labor-total-full" class="p-3 text-center text-emerald-400">-</td>
+              <td id="monthly-labor-total-half" class="p-3 text-center text-amber-400">-</td>
               <td id="monthly-labor-total-days" class="p-3 text-center text-zandiPrimary">-</td>
               <td id="monthly-labor-total-wage" class="p-3 text-right text-emerald-400">-</td>
               <td id="monthly-labor-total-paid" class="p-3 text-right text-emerald-400">-</td>

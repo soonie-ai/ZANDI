@@ -892,11 +892,17 @@ function renderAttendance() {
     return true;
   });
 
+  let attFullCount = filteredAttendance.filter(item => Number(item.workType) === 1.0).length;
+  let attHalfCount = filteredAttendance.filter(item => Number(item.workType) === 0.5).length;
   let attDaysSum = filteredAttendance.reduce((sum, item) => sum + Number(item.workType), 0);
   let attWageSum = filteredAttendance.reduce((sum, item) => sum + (Number(item.workType) === 0 ? item.dailyWage : item.workType * item.dailyWage), 0);
 
   // Render Filter Sum Stats for Attendance
   document.getElementById('filter-att-count').textContent = filteredAttendance.length + '건';
+  const filterFullEl = document.getElementById('filter-att-full-count');
+  const filterHalfEl = document.getElementById('filter-att-half-count');
+  if (filterFullEl) filterFullEl.textContent = attFullCount + '회';
+  if (filterHalfEl) filterHalfEl.textContent = attHalfCount + '회';
   document.getElementById('filter-att-days').textContent = attDaysSum + '일';
   document.getElementById('filter-att-amount').textContent = attWageSum.toLocaleString() + '원';
 
@@ -1127,22 +1133,31 @@ window.toggleAllAttSelects = function(master) {
 function updateCheckedAttendanceStats() {
   const checkedBoxes = document.querySelectorAll('.att-select-check:checked');
   const count = checkedBoxes.length;
+  let fullCount = 0;
+  let halfCount = 0;
   let days = 0;
   let amount = 0;
 
   checkedBoxes.forEach(cb => {
     const att = state.attendance.find(a => a.id === cb.value);
     if (att) {
-      days += Number(att.workType);
-      amount += (Number(att.workType) === 0 ? att.dailyWage : att.workType * att.dailyWage);
+      const workTypeVal = Number(att.workType);
+      if (workTypeVal === 1.0) fullCount++;
+      else if (workTypeVal === 0.5) halfCount++;
+      days += workTypeVal;
+      amount += (workTypeVal === 0 ? att.dailyWage : workTypeVal * att.dailyWage);
     }
   });
 
   const countEl = document.getElementById('checked-att-count');
+  const fullEl = document.getElementById('checked-att-full-count');
+  const halfEl = document.getElementById('checked-att-half-count');
   const daysEl = document.getElementById('checked-att-days');
   const amountEl = document.getElementById('checked-att-amount');
 
   if (countEl) countEl.textContent = count + '건';
+  if (fullEl) fullEl.textContent = fullCount + '회';
+  if (halfEl) halfEl.textContent = halfCount + '회';
   if (daysEl) daysEl.textContent = days + '일';
   if (amountEl) amountEl.textContent = amount.toLocaleString() + '원';
 }
@@ -1577,6 +1592,8 @@ function renderMonthlyLaborReport() {
       const worker = state.workers.find(w => w.id === att.workerId) || { name: '알수없음' };
       workerAgg[att.workerId] = {
         name: worker.name,
+        fullDays: 0,
+        halfDays: 0,
         totalDays: 0,
         totalWage: 0,
         paidAmount: 0,
@@ -1584,8 +1601,14 @@ function renderMonthlyLaborReport() {
       };
     }
     const agg = workerAgg[att.workerId];
-    const amount = Number(att.workType) === 0 ? Number(att.dailyWage) : Number(att.workType) * Number(att.dailyWage);
-    agg.totalDays += Number(att.workType);
+    const workTypeVal = Number(att.workType);
+    if (workTypeVal === 1.0) {
+      agg.fullDays += 1;
+    } else if (workTypeVal === 0.5) {
+      agg.halfDays += 1;
+    }
+    const amount = workTypeVal === 0 ? Number(att.dailyWage) : workTypeVal * Number(att.dailyWage);
+    agg.totalDays += workTypeVal;
     agg.totalWage += amount;
     if (att.isPaid) {
       agg.paidAmount += amount;
@@ -1595,6 +1618,8 @@ function renderMonthlyLaborReport() {
   });
 
   laborList.innerHTML = '';
+  let grandFull = 0;
+  let grandHalf = 0;
   let grandDays = 0;
   let grandWage = 0;
   let grandPaid = 0;
@@ -1603,9 +1628,11 @@ function renderMonthlyLaborReport() {
   const aggList = Object.values(workerAgg).sort((a, b) => b.totalWage - a.totalWage);
 
   if (aggList.length === 0) {
-    laborList.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500 text-xs">선택한 월에 해당하는 인건비 지급 내역이 없습니다.</td></tr>';
+    laborList.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-gray-500 text-xs">선택한 월에 해당하는 인건비 지급 내역이 없습니다.</td></tr>';
   } else {
     aggList.forEach(agg => {
+      grandFull += agg.fullDays;
+      grandHalf += agg.halfDays;
       grandDays += agg.totalDays;
       grandWage += agg.totalWage;
       grandPaid += agg.paidAmount;
@@ -1615,7 +1642,9 @@ function renderMonthlyLaborReport() {
       tr.className = 'border-b border-gray-800 hover:bg-emerald-950/10 text-xs';
       tr.innerHTML = `
         <td class="p-3 pl-2 text-white font-medium">${agg.name}</td>
-        <td class="p-3 text-center text-gray-300">${agg.totalDays.toFixed(1)}일</td>
+        <td class="p-3 text-center text-emerald-400 font-medium">${agg.fullDays}회</td>
+        <td class="p-3 text-center text-amber-400 font-medium">${agg.halfDays}회</td>
+        <td class="p-3 text-center text-gray-300 font-semibold">${agg.totalDays.toFixed(1)}일</td>
         <td class="p-3 text-right text-emerald-400 font-bold">${agg.totalWage.toLocaleString()}원</td>
         <td class="p-3 text-right text-emerald-500">${agg.paidAmount.toLocaleString()}원</td>
         <td class="p-3 text-right text-rose-400">${agg.unpaidAmount.toLocaleString()}원</td>
@@ -1624,11 +1653,15 @@ function renderMonthlyLaborReport() {
     });
   }
 
+  const totalFullEl = document.getElementById('monthly-labor-total-full');
+  const totalHalfEl = document.getElementById('monthly-labor-total-half');
   const totalDaysEl = document.getElementById('monthly-labor-total-days');
   const totalWageEl = document.getElementById('monthly-labor-total-wage');
   const totalPaidEl = document.getElementById('monthly-labor-total-paid');
   const totalUnpaidEl = document.getElementById('monthly-labor-total-unpaid');
 
+  if (totalFullEl) totalFullEl.textContent = `${grandFull}회`;
+  if (totalHalfEl) totalHalfEl.textContent = `${grandHalf}회`;
   if (totalDaysEl) totalDaysEl.textContent = `${grandDays.toFixed(1)}일`;
   if (totalWageEl) totalWageEl.textContent = `${grandWage.toLocaleString()}원`;
   if (totalPaidEl) totalPaidEl.textContent = `${grandPaid.toLocaleString()}원`;
