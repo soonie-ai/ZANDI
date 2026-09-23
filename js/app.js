@@ -510,6 +510,8 @@ function initForms() {
   // 8) Advanced Filters Event Listeners for Sales
   const applyFilters = () => {
     filters.customerId = document.getElementById('filter-sale-customer').value;
+    const statusEl = document.getElementById('filter-sale-status');
+    filters.collectStatus = statusEl ? statusEl.value : '';
     filters.month = document.getElementById('filter-sale-month').value;
     filters.productType = document.getElementById('filter-sale-type').value;
     filters.startDate = document.getElementById('filter-sale-start').value;
@@ -518,6 +520,10 @@ function initForms() {
   };
 
   document.getElementById('filter-sale-customer').addEventListener('change', applyFilters);
+  const filterSaleStatusEl = document.getElementById('filter-sale-status');
+  if (filterSaleStatusEl) {
+    filterSaleStatusEl.addEventListener('change', applyFilters);
+  }
   document.getElementById('filter-sale-month').addEventListener('change', () => {
     const monthVal = document.getElementById('filter-sale-month').value;
     if (monthVal) {

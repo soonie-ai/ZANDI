@@ -540,6 +540,11 @@
           <div class="glass-panel p-6 lg:col-span-2 overflow-x-auto space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <h3 class="text-base font-semibold text-white">등록된 거래처 현황</h3>
+              <label class="custom-checkbox inline-flex items-center gap-2 cursor-pointer bg-black/30 border border-zandiBorder/40 px-3 py-1.5 rounded-lg text-xs text-rose-300 hover:border-rose-500/50">
+                <input type="checkbox" id="filter-cust-uncollected-only" onchange="renderCustomers()">
+                <span class="checkmark"></span>
+                <span class="font-medium">미수금 있는 거래처만 보기</span>
+              </label>
             </div>
             <table class="w-full text-left text-sm min-w-[500px]">
               <thead>
@@ -636,11 +641,19 @@
             <h3 class="text-base font-semibold text-white">잔디 출하 및 판매 대장</h3>
             
             <!-- 필터 컨트롤 레이아웃 -->
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 rounded-xl bg-black/25 border border-zandiBorder/20 text-xs">
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-3 p-4 rounded-xl bg-black/25 border border-zandiBorder/20 text-xs">
               <div>
                 <label class="block text-slate-400 mb-1">거래처 필터</label>
                 <select id="filter-sale-customer" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary">
                   <option value="">전체 거래처</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">수금 상태</label>
+                <select id="filter-sale-status" class="w-full bg-black/40 border border-zandiBorder text-white rounded-lg p-2 focus:outline-none focus:border-zandiPrimary font-medium">
+                  <option value="">전체 내역</option>
+                  <option value="uncollected" class="text-rose-400 font-bold">미수/미지급만</option>
+                  <option value="collected" class="text-emerald-400">완납 내역만</option>
                 </select>
               </div>
               <div>
@@ -690,6 +703,7 @@
                 <span>건수: <strong class="text-white" id="filter-total-count">0건</strong></span>
                 <span>총 수량합: <strong class="text-zandiPrimary" id="filter-total-qty">0</strong></span>
                 <span>총 거래액: <strong class="text-emerald-400 font-bold" id="filter-total-amount">0원</strong></span>
+                <span>미수 잔액: <strong class="text-rose-400 font-bold" id="filter-total-uncollected">0원</strong></span>
               </div>
               <div class="flex items-center gap-2">
                 <button type="button" id="btn-bulk-collect" onclick="bulkCollectSales()" class="btn-primary text-[11px] py-1.5 px-3 rounded-lg justify-center gap-1.5">
@@ -699,6 +713,22 @@
                   거래명세서 발행 <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
                 </button>
               </div>
+            </div>
+
+            <!-- 선택 항목 실시간 금액 합계 바 (체크박스 선택 시 표시) -->
+            <div id="sales-selected-summary-bar" class="hidden flex flex-wrap items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-gray-200 animate-fadeIn">
+              <div class="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+                <span class="inline-flex items-center gap-1.5 font-semibold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-500/30">
+                  <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> 선택 항목 합계
+                </span>
+                <span>선택 건수: <strong class="text-white text-sm" id="selected-sales-count">0</strong>건</span>
+                <span>선택 총 거래액: <strong class="text-emerald-300 font-bold text-sm" id="selected-sales-total-amount">0원</strong></span>
+                <span>선택 미수금(미지급): <strong class="text-rose-400 font-extrabold text-sm" id="selected-sales-uncollected-amount">0원</strong></span>
+                <span>선택 수금완료액: <strong class="text-cyan-300 font-bold" id="selected-sales-collected-amount">0원</strong></span>
+              </div>
+              <button type="button" onclick="clearAllSalesSelects()" class="text-[11px] text-gray-400 hover:text-white underline">
+                선택 해제
+              </button>
             </div>
 
             <div class="overflow-x-auto">

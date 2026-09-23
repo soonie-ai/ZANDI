@@ -370,6 +370,12 @@ function renderCustomers() {
     const initialUncollected = Math.max(0, initialDebtVal - initialCollectedVal);
     const uncollected = (totalSales - totalCollected) + initialUncollected;
 
+    // 미수금 있는 거래처만 보기 필터
+    const onlyUncollectedEl = document.getElementById('filter-cust-uncollected-only');
+    if (onlyUncollectedEl && onlyUncollectedEl.checked && uncollected <= 0) {
+      return;
+    }
+
     const prices = customer.prices || { '1818': 0, '1818t': 0, '3030': 0, '3030t': 0, '4060': 0, 'pyeong': 0, 'extra': 0 };
 
     const tr = document.createElement('tr');
@@ -559,6 +565,15 @@ function renderSales() {
     if (filters.customerId && sale.customerId !== filters.customerId) return false;
     if (filters.productType && sale.productType !== filters.productType) return false;
     
+    // 수금 상태 필터 (uncollected: 미수/부분수금, collected: 완납)
+    if (filters.collectStatus) {
+      const totalAmount = sale.quantity * sale.price;
+      const collectedAmount = (sale.payments || []).reduce((sum, p) => sum + p.amount, 0);
+      const uncollectedAmount = totalAmount - collectedAmount;
+      if (filters.collectStatus === 'uncollected' && uncollectedAmount <= 0) return false;
+      if (filters.collectStatus === 'collected' && uncollectedAmount > 0) return false;
+    }
+
     // 월별 필터가 있는 경우
     if (filters.month) {
       const saleMonth = sale.saleDate.substring(0, 7);
@@ -574,6 +589,7 @@ function renderSales() {
   // Calculate Filter Stats
   let filterQtyTotal = 0;
   let filterAmountTotal = 0;
+  let filterUncollectedTotal = 0;
 
   filteredSales.sort((a,b) => new Date(b.saleDate) - new Date(a.saleDate)).forEach(sale => {
     const customer = state.customers.find(c => c.id === sale.customerId) || { name: '삭제된 거래처' };
@@ -586,6 +602,7 @@ function renderSales() {
 
     filterQtyTotal += sale.quantity;
     filterAmountTotal += total;
+    filterUncollectedTotal += Math.max(0, uncollected);
 
     const tr = document.createElement('tr');
     tr.id = `sale-row-${sale.id}`;
@@ -650,17 +667,69 @@ function renderSales() {
   document.getElementById('filter-total-count').textContent = filteredSales.length + '건';
   document.getElementById('filter-total-qty').textContent = filterQtyTotal.toLocaleString();
   document.getElementById('filter-total-amount').textContent = filterAmountTotal.toLocaleString() + '원';
+  const filterUncollectedEl = document.getElementById('filter-total-uncollected');
+  if (filterUncollectedEl) {
+    filterUncollectedEl.textContent = filterUncollectedTotal.toLocaleString() + '원';
+  }
   
+  // 전체선택 체크박스 및 선택 집계 초기화
+  const allCheckHeader = document.getElementById('sales-select-all-check');
+  if (allCheckHeader) allCheckHeader.checked = false;
+  updateSalesSelectedSummary();
+
   if (window.lucide) window.lucide.createIcons();
 }
+
+// 선택된 항목들의 건수, 총거래액, 미수금, 수금완료액 실시간 계산 및 UI 업데이트
+window.updateSalesSelectedSummary = function() {
+  const checkedBoxes = document.querySelectorAll('.sale-select-row-check:checked');
+  const summaryBar = document.getElementById('sales-selected-summary-bar');
+  if (!summaryBar) return;
+
+  if (checkedBoxes.length === 0) {
+    summaryBar.classList.add('hidden');
+    return;
+  }
+
+  summaryBar.classList.remove('hidden');
+
+  let selectedTotalAmount = 0;
+  let selectedCollectedAmount = 0;
+  let selectedUncollectedAmount = 0;
+
+  checkedBoxes.forEach(cb => {
+    const saleId = cb.getAttribute('data-sale-id');
+    const sale = state.sales.find(s => s.id === saleId);
+    if (sale) {
+      const total = sale.quantity * sale.price;
+      const collected = (sale.payments || []).reduce((sum, p) => sum + p.amount, 0);
+      const uncollected = Math.max(0, total - collected);
+
+      selectedTotalAmount += total;
+      selectedCollectedAmount += collected;
+      selectedUncollectedAmount += uncollected;
+    }
+  });
+
+  const countEl = document.getElementById('selected-sales-count');
+  const totalEl = document.getElementById('selected-sales-total-amount');
+  const uncollectedEl = document.getElementById('selected-sales-uncollected-amount');
+  const collectedEl = document.getElementById('selected-sales-collected-amount');
+
+  if (countEl) countEl.textContent = checkedBoxes.length.toLocaleString();
+  if (totalEl) totalEl.textContent = selectedTotalAmount.toLocaleString() + '원';
+  if (uncollectedEl) uncollectedEl.textContent = selectedUncollectedAmount.toLocaleString() + '원';
+  if (collectedEl) collectedEl.textContent = selectedCollectedAmount.toLocaleString() + '원';
+};
 
 window.toggleSaleSelectRow = function(checkbox) {
   const allChecks = document.querySelectorAll('.sale-select-row-check');
   const checkedCount = document.querySelectorAll('.sale-select-row-check:checked').length;
   const allCheckHeader = document.getElementById('sales-select-all-check');
   if (allCheckHeader) {
-    allCheckHeader.checked = (allChecks.length === checkedCount);
+    allCheckHeader.checked = (allChecks.length > 0 && allChecks.length === checkedCount);
   }
+  updateSalesSelectedSummary();
 };
 
 window.toggleAllSalesSelects = function(headerCheckbox) {
@@ -669,6 +738,17 @@ window.toggleAllSalesSelects = function(headerCheckbox) {
   rowCheckboxes.forEach(cb => {
     cb.checked = isChecked;
   });
+  updateSalesSelectedSummary();
+};
+
+window.clearAllSalesSelects = function() {
+  const rowCheckboxes = document.querySelectorAll('.sale-select-row-check');
+  rowCheckboxes.forEach(cb => {
+    cb.checked = false;
+  });
+  const allCheckHeader = document.getElementById('sales-select-all-check');
+  if (allCheckHeader) allCheckHeader.checked = false;
+  updateSalesSelectedSummary();
 };
 
 window.bulkCollectSales = async function() {

@@ -79,7 +79,8 @@ let filters = {
   productType: '',
   startDate: '',
   endDate: '',
-  month: ''
+  month: '',
+  collectStatus: '' // '', 'uncollected', 'collected'
 };
 
 let attFilters = {
