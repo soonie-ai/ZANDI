@@ -2398,28 +2398,93 @@ window.printRentLandscape = function() {
     printDate.textContent = `출력 일시: ${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
   }
 
-  // 1.5) 인쇄 대상 행 수에 따른 동적 자동 1페이지 맞춤 배율 계산
+  // 1.5) 인쇄 대상 행 수 및 선택한 글씨 크기에 따른 CSS 변수 적용
   const visibleRows = document.querySelectorAll('#rent-list tr:not(.print-exclude)');
   const rowCount = visibleRows.length;
   const tableEl = document.getElementById('rent-main-table');
+  const sizeSelect = document.getElementById('rent-print-font-size');
+  const selectedSize = sizeSelect ? sizeSelect.value : (localStorage.getItem('zandi_rent_print_font_size') || 'normal');
 
-  // 행 수가 18행을 넘어가면 1페이지 안에 모두 들어가도록 자동 축소 비율 계산
-  let scaleRatio = 1.0;
+  // 글씨 크기별 세부 폰트 및 패딩 프리셋
+  const fontPresets = {
+    compact: {
+      fontSize: '7.5pt',
+      cellPadding: '1px 2px',
+      headerPadding: '2px 2px',
+      boxHeight: '12px',
+      boxFontSize: '6.5pt',
+      baseScale: 1.0,
+      scale20: 0.88,
+      scale24: 0.82
+    },
+    normal: {
+      fontSize: '8.8pt',
+      cellPadding: '1.8px 3px',
+      headerPadding: '3px 3px',
+      boxHeight: '14px',
+      boxFontSize: '7.5pt',
+      baseScale: 1.0,
+      scale20: 0.92,
+      scale24: 0.85
+    },
+    large: {
+      fontSize: '10.2pt',
+      cellPadding: '2.5px 3.5px',
+      headerPadding: '4px 3.5px',
+      boxHeight: '16px',
+      boxFontSize: '8.5pt',
+      baseScale: 1.0,
+      scale20: 0.94,
+      scale24: 0.88
+    },
+    xlarge: {
+      fontSize: '11.5pt',
+      cellPadding: '3px 4px',
+      headerPadding: '5px 4px',
+      boxHeight: '18px',
+      boxFontSize: '9.5pt',
+      baseScale: 1.0,
+      scale20: 0.96,
+      scale24: 0.90
+    }
+  };
+
+  const preset = fontPresets[selectedSize] || fontPresets.normal;
+
+  // 행 수에 따라 너무 넘치지 않도록 미세 조정 배율 계산
+  let scaleRatio = preset.baseScale;
   if (rowCount > 24) {
-    scaleRatio = 0.78;
+    scaleRatio = preset.scale24;
   } else if (rowCount > 20) {
-    scaleRatio = 0.84;
-  } else if (rowCount > 16) {
-    scaleRatio = 0.90;
+    scaleRatio = preset.scale20;
   }
 
   if (tableEl) {
     tableEl.style.setProperty('--print-scale', String(scaleRatio));
+    tableEl.style.setProperty('--print-font-size', preset.fontSize);
+    tableEl.style.setProperty('--print-cell-padding', preset.cellPadding);
+    tableEl.style.setProperty('--print-header-padding', preset.headerPadding);
+    tableEl.style.setProperty('--print-box-height', preset.boxHeight);
+    tableEl.style.setProperty('--print-box-font-size', preset.boxFontSize);
   }
 
   // 2) 브라우저 기본 인쇄 실행 (css의 @media print에서 가로 세팅 자동 적용)
   window.print();
 };
+
+// 글씨 크기 선택 변경 시 로컬 스토리지에 기억
+document.addEventListener('DOMContentLoaded', () => {
+  const sizeSelect = document.getElementById('rent-print-font-size');
+  if (sizeSelect) {
+    const saved = localStorage.getItem('zandi_rent_print_font_size');
+    if (saved) {
+      sizeSelect.value = saved;
+    }
+    sizeSelect.addEventListener('change', (e) => {
+      localStorage.setItem('zandi_rent_print_font_size', e.target.value);
+    });
+  }
+});
 
 // 4.5.2. 이월 미수금 일괄 입금/수금 관련 액션
 window.openDebtCollectModal = function(customerId, customerName, uncollectedAmount) {

@@ -34,7 +34,7 @@
     }
   </script>
   <!-- CSS Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=2041">
+  <link rel="stylesheet" href="styles.css?v=2042">
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -1089,6 +1089,17 @@
             <button type="button" id="btn-open-rent-register" class="btn-primary text-xs py-2 px-3">
               계약 등록 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
             </button>
+            <div class="flex items-center bg-black/40 border border-emerald-500/30 rounded-lg px-2 py-1 gap-1.5 text-xs text-slate-300">
+              <label for="rent-print-font-size" class="text-emerald-400 font-medium whitespace-nowrap flex items-center gap-1">
+                <i data-lucide="type" class="w-3.5 h-3.5"></i> 글씨크기:
+              </label>
+              <select id="rent-print-font-size" class="bg-black/60 border border-zandiBorder text-white rounded px-2 py-1 text-xs focus:outline-none focus:border-zandiPrimary cursor-pointer">
+                <option value="compact">작게 (기본 1장 압축)</option>
+                <option value="normal" selected>보통 (권장 가독성)</option>
+                <option value="large">크게 (시원하게)</option>
+                <option value="xlarge">아주 크게 (큰글씨)</option>
+              </select>
+            </div>
             <button type="button" onclick="printRentLandscape()" class="btn-secondary text-xs py-2 px-3 text-emerald-400 border-emerald-500/20">
               A4 가로 인쇄 <i data-lucide="printer" class="w-3.5 h-3.5"></i>
             </button>
@@ -2185,7 +2196,7 @@
   <script src="js/state.js?v=2036"></script>
   <script src="js/utils.js?v=2036"></script>
   <script src="js/db.js?v=2036"></script>
-  <script src="js/ui.js?v=2038"></script>
+  <script src="js/ui.js?v=2042"></script>
   <script src="js/app.js?v=2036"></script>
 </body>
 </html>

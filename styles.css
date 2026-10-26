@@ -667,8 +667,8 @@ select option {
     margin: 0 !important;
     padding: 0 !important;
     overflow: visible !important;
-    font-size: 7pt !important;
-    line-height: 1.0 !important;
+    font-size: var(--print-font-size, 8.5pt) !important;
+    line-height: 1.15 !important;
   }
 
   /* 인쇄 시 불필요한 레이아웃 및 타 섹션 완전 숨김 */
@@ -707,14 +707,14 @@ select option {
     transform: none !important;
   }
 
-  /* 테이블 스타일: 1장에 맞추기 위해 고정 레이아웃 및 초밀착 줄간격 적용 */
+  /* 테이블 스타일: 고정 레이아웃 대신 유연한 비율 및 콘텐츠 확장 레이아웃 적용 */
   #rent-main-table {
     width: 100% !important;
     max-width: 100% !important;
-    table-layout: fixed !important;
+    table-layout: auto !important; /* 내용과 글씨 크기에 맞춰 자연스럽게 열 폭 자동 확장 */
     border-collapse: collapse !important;
     color: black !important;
-    zoom: var(--print-scale, 0.82) !important; /* 브라우저 인쇄 배율을 자동 축소하여 1장에 강제 수납 */
+    zoom: var(--print-scale, 1.0) !important;
     transform-origin: top left !important;
   }
 
@@ -723,87 +723,80 @@ select option {
     page-break-after: auto !important;
   }
 
-  /* 컬럼별 최적화된 너비 및 정렬 규격 */
+  /* 컬럼별 최적화된 너비 및 정렬 규격: 비고란 제거 후 핵심 칸 넉넉히 분배 및 1줄 고정 */
   #rent-main-table .col-pay-date {
-    width: 65px !important;
+    width: 8% !important;
     text-align: center !important;
+    white-space: nowrap !important;
   }
 
   #rent-main-table .col-owner {
-    width: 95px !important;
+    width: 12% !important;
     text-align: left !important;
-    padding-left: 4px !important;
-    font-weight: bold !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+    padding-left: 6px !important;
+    font-weight: normal !important;
     white-space: nowrap !important;
   }
 
   #rent-main-table .col-phone {
-    width: 100px !important;
+    width: 15% !important;
     text-align: center !important;
+    white-space: nowrap !important;
   }
 
   #rent-main-table .col-address {
-    width: 170px !important; /* 주소 지번 폭 알맞게 축소 */
+    width: 33% !important; /* 주소란에 가장 넓은 공간 배정 */
     text-align: left !important;
-    padding-left: 4px !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+    padding-left: 6px !important;
     white-space: nowrap !important;
+    overflow: visible !important; /* 잘림 방지 */
+    text-overflow: clip !important;
   }
 
   #rent-main-table .col-area {
-    width: 48px !important;
+    width: 6% !important;
     text-align: center !important;
-  }
-
-  #rent-main-table .col-amount {
-    width: 85px !important;
-    text-align: right !important;
-    padding-right: 4px !important;
-    font-weight: bold !important;
-  }
-
-  #rent-main-table .col-account {
-    width: 155px !important;
-    text-align: left !important;
-    padding-left: 4px !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
     white-space: nowrap !important;
   }
 
-  /* 계좌번호 우측의 메모/비고 작성 여백 */
-  #rent-main-table .col-memo {
-    width: auto !important; /* 남은 공간을 모두 수기 메모/비고 영역으로 배정 */
-    text-align: left !important;
-    padding-left: 4px !important;
-  }
-  #rent-main-table th.col-memo {
-    color: black !important;
-    text-align: center !important;
-  }
-  #rent-main-table td.col-memo {
-    color: transparent !important; /* 인쇄물에서 본문 메모는 완전한 빈칸으로 인쇄 */
-    user-select: none !important;
-  }
-  #rent-main-table td.col-memo * {
-    display: none !important;
+  #rent-main-table .col-amount {
+    width: 12% !important;
+    text-align: right !important;
+    padding-right: 8px !important;
+    font-weight: normal !important;
+    white-space: nowrap !important;
   }
 
-  /* 인쇄용 지급일자 상자 (세로 높이를 12px로 슬림화) */
+  #rent-main-table .col-account {
+    width: 27% !important; /* 계좌번호란 넉넉하게 배정 */
+    text-align: left !important;
+    padding-left: 6px !important;
+    white-space: nowrap !important;
+    overflow: visible !important; /* 글자 끝자리 잘림 방지 */
+    text-overflow: clip !important;
+  }
+
+  /* 비고란(메모) 인쇄 시 완전 숨김 */
+  #rent-main-table .col-memo {
+    display: none !important;
+    width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+  }
+
+  /* 인쇄용 지급일자 상자 */
   .print-pay-box {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 55px !important;
-    height: 12px !important;
+    width: 60px !important;
+    height: var(--print-box-height, 14px) !important;
     border: 1px solid #777 !important;
     background: #fafafa !important;
     border-radius: 2px !important;
     margin: 0 auto !important;
-    font-size: 6.5pt !important;
+    font-size: var(--print-box-font-size, 7.5pt) !important;
     line-height: 1 !important;
   }
 
@@ -813,22 +806,26 @@ select option {
     height: 100% !important;
   }
 
-  th, td {
+  th, td, #rent-main-table th, #rent-main-table td {
     border: 1px solid #bbb !important;
-    padding: 0.8px 2px !important; /* 세로 패딩을 0.8px로 극대화 축소하여 25~30행 1장 인쇄 보장 */
+    padding: var(--print-cell-padding, 1.2px 3px) !important;
     color: black !important;
-    font-size: 7pt !important;
-    line-height: 1.05 !important;
+    font-size: var(--print-font-size, 8.5pt) !important;
+    line-height: var(--print-line-height, 1.15) !important;
+    font-weight: 400 !important; /* 모든 글자 평등하게 보통 굵기(normal) 적용 */
+    white-space: nowrap !important; /* 어떤 칸도 2줄로 넘어가지 않도록 강제 단일행 유지 */
     background: transparent !important;
     vertical-align: middle !important;
+    box-sizing: border-box !important;
   }
 
-  th {
+  th, #rent-main-table th {
     background-color: #eaeaea !important;
-    font-weight: 700 !important;
+    font-weight: 400 !important; /* 헤더도 본문과 완전히 평등한 보통(normal) 굵기로 통일 */
     text-align: center !important;
-    font-size: 7pt !important;
-    padding: 1.5px 2px !important;
+    font-size: var(--print-font-size, 8.5pt) !important;
+    padding: var(--print-header-padding, 2.5px 3px) !important;
+    white-space: nowrap !important;
   }
 
   td.text-right {
