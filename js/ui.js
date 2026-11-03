@@ -1343,6 +1343,19 @@ function renderRent() {
   document.getElementById('rent-paid-amount').textContent = paidAmount.toLocaleString() + '원';
   document.getElementById('rent-unpaid-amount').textContent = unpaidAmount.toLocaleString() + '원';
 
+  // 현재 화면 목록 기준 평수 및 임대료 총합 계산
+  const currentListTotalAmount = filteredRents.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  const currentListTotalArea = filteredRents.reduce((sum, r) => sum + (Number(r.area) || 0), 0);
+
+  const topCountEl = document.getElementById('rent-top-count');
+  if (topCountEl) topCountEl.textContent = filteredRents.length.toLocaleString() + '명';
+
+  const topAreaEl = document.getElementById('rent-top-area');
+  if (topAreaEl) topAreaEl.textContent = currentListTotalArea.toLocaleString() + '평';
+
+  const topAmountEl = document.getElementById('rent-top-total-amount');
+  if (topAmountEl) topAmountEl.textContent = currentListTotalAmount.toLocaleString() + '원';
+
   // Render Table
   rentList.innerHTML = '';
   if (filteredRents.length === 0) {
@@ -2468,7 +2481,15 @@ window.printRentLandscape = function() {
     tableEl.style.setProperty('--print-box-font-size', preset.boxFontSize);
   }
 
-  // 2) 브라우저 기본 인쇄 실행 (css의 @media print에서 가로 세팅 자동 적용)
+  // 2) 임대료 전용 A4 landscape 인쇄 스타일 동적 주입 후 인쇄
+  let printStyle = document.getElementById('dynamic-print-page-style');
+  if (!printStyle) {
+    printStyle = document.createElement('style');
+    printStyle.id = 'dynamic-print-page-style';
+    document.head.appendChild(printStyle);
+  }
+  printStyle.textContent = `@page { size: A4 landscape !important; margin: 3mm 6mm !important; }`;
+
   window.print();
 };
 
@@ -2948,7 +2969,13 @@ window.openStatementModal = function() {
   editableFields.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
-      const saved = localStorage.getItem(`zandi_stmt_v2_${id}`);
+      let saved = localStorage.getItem(`zandi_stmt_v2_${id}`);
+      if (id === 'stmt-supplier-owner') {
+        if (!saved || !saved.includes('문병선')) {
+          saved = '유수경, 문병선';
+          localStorage.setItem(`zandi_stmt_v2_${id}`, saved);
+        }
+      }
       if (saved !== null) {
         el.textContent = saved;
       }
@@ -3094,7 +3121,29 @@ window.recalculateStatement = function() {
 };
 
 window.printStatement = function() {
+  const modal = document.getElementById('statement-modal');
+  if (!modal) return;
+
+  // 인쇄 전 삭제 버튼(X) 열 숨기기
+  const noPrintCols = modal.querySelectorAll('.no-print');
+  // 거래명세서 전용 A4 portrait 인쇄 스타일 동적 주입 후 인쇄
+  let printStyle = document.getElementById('dynamic-print-page-style');
+  if (!printStyle) {
+    printStyle = document.createElement('style');
+    printStyle.id = 'dynamic-print-page-style';
+    document.head.appendChild(printStyle);
+  }
+  printStyle.textContent = `@page { size: A4 portrait !important; margin: 8mm !important; }`;
+
+  // 브라우저 기본 인쇄창 띄우기 (화면 모달에 보이는 그대로 100% 일치하여 PDF 및 인쇄로 전송)
   window.print();
+
+  // 인쇄 창 닫힌 후 삭제 버튼 열 복구 (토글 체크박스 상태에 따름)
+  const toggleCheckbox = document.getElementById('stmt-toggle-delete');
+  const shouldHide = toggleCheckbox ? toggleCheckbox.checked : false;
+  if (!shouldHide) {
+    noPrintCols.forEach(col => col.style.removeProperty('display'));
+  }
 };
 
 window.toggleStatementDeleteColumn = function(hide) {

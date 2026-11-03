@@ -645,12 +645,13 @@ select option {
   }
 }
 
-/* 프린트 스타일 시트 (A4 가로 강제 세팅) */
+/* 프린트 스타일 시트 (기본: auto, 거래명세서: portrait, 임대료: landscape) */
+@page {
+  size: auto;
+  margin: 5mm;
+}
+
 @media print {
-  @page {
-    size: A4 landscape;
-    margin: 3mm 6mm !important; /* 상하 여백을 3mm로 최소화하여 인쇄 가능 높이 극대화 */
-  }
   
   /* 모든 요소의 배경 이미지, 그림자 제거 */
   *, *::before, *::after {
@@ -681,16 +682,16 @@ select option {
   button,
   .btn-primary,
   .btn-secondary,
-  .content-section:not(#rent-section),
+  body:not(:has(#statement-modal:not(.hidden))) .content-section:not(#rent-section),
   .print-only,
   #print-document-title,
   #print-date-info {
     display: none !important;
   }
 
-  /* 메인 콘텐츠 영역 여백 및 높이 리셋 */
-  #main-app,
-  main,
+  /* 메인 콘텐츠 영역 여백 및 높이 리셋 (임대료 인쇄 시에만 적용) */
+  body:not(:has(#statement-modal:not(.hidden))) #main-app,
+  body:not(:has(#statement-modal:not(.hidden))) main,
   #rent-section,
   #rent-table-panel {
     margin: 0 !important;
@@ -806,7 +807,7 @@ select option {
     height: 100% !important;
   }
 
-  th, td, #rent-main-table th, #rent-main-table td {
+  #rent-main-table th, #rent-main-table td {
     border: 1px solid #bbb !important;
     padding: var(--print-cell-padding, 1.2px 3px) !important;
     color: black !important;
@@ -819,7 +820,7 @@ select option {
     box-sizing: border-box !important;
   }
 
-  th, #rent-main-table th {
+  #rent-main-table th {
     background-color: #eaeaea !important;
     font-weight: 400 !important; /* 헤더도 본문과 완전히 평등한 보통(normal) 굵기로 통일 */
     text-align: center !important;
@@ -828,11 +829,11 @@ select option {
     white-space: nowrap !important;
   }
 
-  td.text-right {
+  #rent-main-table td.text-right {
     text-align: right !important;
   }
 
-  td.text-center {
+  #rent-main-table td.text-center {
     text-align: center !important;
   }
 
@@ -916,20 +917,38 @@ select option {
   border-bottom: 1.5px dashed var(--primary);
 }
 
-/* 명세서 테이블 흑백 테두리 고정 */
+/* 명세서 테이블 흑백 테두리 고정 및 가독성 최적화 */
 #statement-table {
   border: 2px solid #000000 !important;
+  width: 100% !important;
 }
 #statement-table th, #statement-table td {
   border: 1px solid #000000 !important;
   color: #000000 !important;
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  padding: 6px 4px !important;
+  font-size: 11px !important;
+  line-height: 1.25 !important;
+}
+
+#statement-table th {
+  background-color: #f3f4f6 !important;
+  font-weight: bold !important;
 }
 
 /* =============================================
    🖨️ 거래명세서 전용 프린트 미디어 쿼리
    ============================================= */
+@page {
+  size: A4 portrait;
+  margin: 8mm;
+}
+
 @media print {
-  /* 거래명세서 모달이 보일 때만 이 인쇄 전용 규칙을 강제 적용 */
+  /* 거래명세서 모달이 열려 있을 때는 화면과 동일한 흰색 배경 및 단독 표시 강제 적용 */
   body:has(#statement-modal:not(.hidden)) {
     background: #ffffff !important;
     color: #000000 !important;
@@ -949,7 +968,7 @@ select option {
   }
 
   body:has(#statement-modal:not(.hidden)) #statement-modal {
-    position: absolute !important;
+    position: static !important;
     left: 0 !important;
     top: 0 !important;
     width: 100% !important;
@@ -957,6 +976,8 @@ select option {
     background: #ffffff !important;
     display: block !important;
     overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   body:has(#statement-modal:not(.hidden)) #statement-modal-panel {
@@ -964,20 +985,41 @@ select option {
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
     max-width: 100% !important;
-    max-height: 100% !important;
+    max-height: none !important;
     overflow: visible !important;
   }
 
   body:has(#statement-modal:not(.hidden)) #statement-print-content {
-    border: none !important;
+    border: 2px solid #000000 !important;
     box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    border-radius: 8px !important;
+    padding: 24px 28px !important;
+    margin: 0 auto !important;
     width: 100% !important;
     max-width: 100% !important;
+    box-sizing: border-box !important;
     background: #ffffff !important;
     color: #000000 !important;
+    page-break-inside: avoid !important;
+  }
+
+  body:has(#statement-modal:not(.hidden)) #statement-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    border: 2px solid #000000 !important;
+  }
+
+  body:has(#statement-modal:not(.hidden)) #statement-table th,
+  body:has(#statement-modal:not(.hidden)) #statement-table td {
+    border: 1px solid #000000 !important;
+    padding: 6px 4px !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
   }
 
   /* 인쇄 시 contenteditable 아웃라인 제거 */
