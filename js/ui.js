@@ -3005,6 +3005,9 @@ window.openStatementModal = function() {
 
     const tr = document.createElement('tr');
     tr.className = 'border-b border-black';
+    if (sale.id) {
+      tr.dataset.saleId = sale.id;
+    }
     tr.innerHTML = `
       <td class="border-r border-black p-1.5" contenteditable="true">${dateStr}</td>
       <td class="border-r border-black p-1.5 text-left" contenteditable="true">재배잔디</td>
@@ -3207,6 +3210,375 @@ window.filterStatementBySpec = function(spec) {
 
   // 3. 필터링된 보이는 내역 기준으로 합계 금액/수량 재계산
   recalculateStatement();
+};
+
+// ============================================================
+// 📊 거래명세서 엑셀(.xlsx) / 한글(.hwp) 다운로드 & 판매대장 반영 저장
+// ============================================================
+
+// 1. 거래명세서 현재 화면 내용 데이터 추출 헬퍼
+function getStatementCurrentData() {
+  const customerName = document.getElementById('stmt-customer-name')?.textContent.trim() || '거래처';
+  const issueDate = document.getElementById('stmt-issue-date')?.textContent.trim() || new Date().toISOString().split('T')[0];
+  const actionType = document.getElementById('stmt-action-type')?.textContent.trim() || '아래와 같이 청구합니다.';
+
+  const supplierNo = document.getElementById('stmt-supplier-no')?.textContent.trim() || '';
+  const supplierName = document.getElementById('stmt-supplier-name')?.textContent.trim() || '양지잔디';
+  const supplierOwner = document.getElementById('stmt-supplier-owner')?.textContent.trim() || '';
+  const supplierAddr = document.getElementById('stmt-supplier-addr')?.textContent.trim() || '';
+  const supplierPhone = document.getElementById('stmt-supplier-phone')?.textContent.trim() || '';
+  const bankInfo = document.getElementById('stmt-bank-info')?.textContent.trim() || '';
+
+  const totalQtyText = document.getElementById('stmt-total-qty')?.textContent.trim() || '0';
+  const totalAmountText = document.getElementById('stmt-total-amount')?.textContent.trim() || '0원';
+
+  const rows = [];
+  const tbody = document.getElementById('statement-items-body');
+  if (tbody) {
+    const trList = tbody.querySelectorAll('tr:not(#stmt-empty-row)');
+    trList.forEach(tr => {
+      if (tr.style.display === 'none') return;
+      const cells = tr.querySelectorAll('td');
+      if (cells.length < 6) return;
+
+      const date = cells[0].textContent.trim();
+      const name = cells[1].textContent.trim();
+      const spec = cells[2].textContent.trim();
+      const qty = Number(cells[3].textContent.replace(/[^0-9]/g, '')) || 0;
+      const price = Number(cells[4].textContent.replace(/[^0-9]/g, '')) || 0;
+      const amount = qty * price;
+      const notes = cells[6].textContent.trim();
+      const saleId = tr.dataset.saleId || '';
+
+      rows.push({ saleId, date, name, spec, qty, price, amount, notes });
+    });
+  }
+
+  return {
+    customerName,
+    issueDate,
+    actionType,
+    supplierNo,
+    supplierName,
+    supplierOwner,
+    supplierAddr,
+    supplierPhone,
+    bankInfo,
+    totalQtyText,
+    totalAmountText,
+    rows
+  };
+}
+
+// 2. 엑셀 파일 (.xlsx) 다운로드 기능
+window.exportStatementExcel = function() {
+  if (typeof XLSX === 'undefined') {
+    alert('엑셀 라이브러리를 로드하는 중입니다. 잠시 후 다시 시도해 주세요.');
+    return;
+  }
+
+  const data = getStatementCurrentData();
+  if (data.rows.length === 0) {
+    alert('내보낼 거래명세서 항목이 없습니다.');
+    return;
+  }
+
+  // 엑셀 워크시트 2차원 데이터 구성
+  const wsData = [
+    ['거 래 명 세 서', '', '', '', '', '', ''],
+    [],
+    ['공급받는 자', data.customerName, '', '공급자 정보', '', '', ''],
+    ['발행일자', data.issueDate, '', '등록번호', data.supplierNo, '상호명', data.supplierName],
+    ['구분', data.actionType, '', '대표자', data.supplierOwner, '연락처', data.supplierPhone],
+    ['', '', '', '사업장 주소', data.supplierAddr, '', ''],
+    [],
+    ['월/일', '품명', '규격', '수량', '단가', '공급가액', '비고']
+  ];
+
+  let totalQty = 0;
+  let totalAmount = 0;
+
+  data.rows.forEach(r => {
+    totalQty += r.qty;
+    totalAmount += r.amount;
+    wsData.push([
+      r.date,
+      r.name,
+      r.spec,
+      r.qty,
+      r.price,
+      r.amount,
+      r.notes
+    ]);
+  });
+
+  wsData.push([
+    '합계',
+    '',
+    '',
+    totalQty,
+    '',
+    totalAmount,
+    data.totalQtyText
+  ]);
+
+  wsData.push([]);
+  wsData.push(['입금 계좌 안내', data.bankInfo, '', '', '', '', '']);
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // 열 너비 지정
+  ws['!cols'] = [
+    { wch: 10 }, // 월/일
+    { wch: 16 }, // 품명
+    { wch: 12 }, // 규격
+    { wch: 12 }, // 수량
+    { wch: 14 }, // 단가
+    { wch: 18 }, // 공급가액
+    { wch: 20 }  // 비고
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, '거래명세서');
+
+  // 파일명 포맷: 거래명세서_거래처명_발행일자.xlsx
+  const safeCustName = data.customerName.replace(/[^a-zA-Z0-9가-힣]/g, '_');
+  const filename = `거래명세서_${safeCustName}_${data.issueDate}.xlsx`;
+
+  XLSX.writeFile(wb, filename);
+};
+
+// 3. 한글 파일 (.hwp) 다운로드 기능
+// 한글/한컴오피스(HWP) 및 워드에서 더블클릭 시 즉시 표 문서로 온전하게 열리고 수정 가능한 HTML-DOC MIME 포맷 제공
+window.exportStatementHwp = function() {
+  const data = getStatementCurrentData();
+  if (data.rows.length === 0) {
+    alert('내보낼 거래명세서 항목이 없습니다.');
+    return;
+  }
+
+  let rowsHtml = '';
+  data.rows.forEach(r => {
+    rowsHtml += `
+      <tr>
+        <td style="border:1px solid #000; text-align:center; padding:6px;">${r.date}</td>
+        <td style="border:1px solid #000; text-align:left; padding:6px;">${r.name}</td>
+        <td style="border:1px solid #000; text-align:center; padding:6px;">${r.spec}</td>
+        <td style="border:1px solid #000; text-align:right; padding:6px;">${r.qty.toLocaleString()}</td>
+        <td style="border:1px solid #000; text-align:right; padding:6px;">${r.price.toLocaleString()}</td>
+        <td style="border:1px solid #000; text-align:right; font-weight:bold; padding:6px;">${r.amount.toLocaleString()}원</td>
+        <td style="border:1px solid #000; text-align:left; padding:6px;">${r.notes}</td>
+      </tr>
+    `;
+  });
+
+  const hwpContent = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>거래명세서 - ${data.customerName}</title>
+<style>
+  body { font-family: '맑은 고딕', 'Batang', 'Malgun Gothic', 'Dotum', sans-serif; font-size: 10pt; color: #000; }
+  h1 { text-align: center; font-size: 20pt; letter-spacing: 5px; margin-bottom: 20px; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 15px; }
+  th, td { border: 1px solid #000; font-size: 9.5pt; }
+  .header-box { width: 100%; border: 1px solid #000; margin-bottom: 15px; }
+</style>
+</head>
+<body>
+  <h1>거 래 명 세 서</h1>
+
+  <table style="width:100%; border:none; margin-bottom:12px;">
+    <tr>
+      <!-- 공급받는 자 -->
+      <td style="width:48%; vertical-align:top; border:1px solid #000; padding:8px;">
+        <div style="font-size:9pt; color:#555; font-weight:bold;">공급받는 자</div>
+        <div style="font-size:14pt; font-weight:bold; margin-top:6px; margin-bottom:14px; border-bottom:1px solid #ddd; padding-bottom:4px;">
+          ${data.customerName}
+        </div>
+        <div style="font-size:9pt; margin-top:8px;">발행일자: <b>${data.issueDate}</b></div>
+        <div style="font-size:9pt; margin-top:4px;"><b>${data.actionType}</b></div>
+      </td>
+      <td style="width:4%; border:none;"></td>
+      <!-- 공급자 -->
+      <td style="width:48%; vertical-align:top; border:1px solid #000; padding:0;">
+        <table style="width:100%; height:100%; margin:0; border-collapse:collapse;">
+          <tr>
+            <td rowspan="4" style="width:25px; background:#f2f2f2; text-align:center; font-weight:bold; border-right:1px solid #000;">공<br>급<br>자</td>
+            <td style="width:70px; background:#f2f2f2; text-align:center; font-weight:bold; padding:4px; border-right:1px solid #000; border-bottom:1px solid #000;">등록번호</td>
+            <td colspan="3" style="padding:4px; border-bottom:1px solid #000; font-weight:bold;">${data.supplierNo}</td>
+          </tr>
+          <tr>
+            <td style="background:#f2f2f2; text-align:center; font-weight:bold; padding:4px; border-right:1px solid #000; border-bottom:1px solid #000;">상호명</td>
+            <td style="padding:4px; border-right:1px solid #000; border-bottom:1px solid #000; font-weight:bold;">${data.supplierName}</td>
+            <td style="width:50px; background:#f2f2f2; text-align:center; font-weight:bold; padding:4px; border-right:1px solid #000; border-bottom:1px solid #000;">대표자</td>
+            <td style="padding:4px; border-bottom:1px solid #000; font-weight:bold;">${data.supplierOwner}</td>
+          </tr>
+          <tr>
+            <td style="background:#f2f2f2; text-align:center; font-weight:bold; padding:4px; border-right:1px solid #000; border-bottom:1px solid #000;">주소</td>
+            <td colspan="3" style="padding:4px; border-bottom:1px solid #000;">${data.supplierAddr}</td>
+          </tr>
+          <tr>
+            <td style="background:#f2f2f2; text-align:center; font-weight:bold; padding:4px; border-right:1px solid #000;">연락처</td>
+            <td colspan="3" style="padding:4px;">${data.supplierPhone}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <!-- 거래 명세 품목 테이블 -->
+  <table style="width:100%; border:1px solid #000; text-align:center;">
+    <thead>
+      <tr style="background:#f2f2f2; font-weight:bold;">
+        <th style="border:1px solid #000; padding:6px; width:10%;">월/일</th>
+        <th style="border:1px solid #000; padding:6px; width:20%;">품명</th>
+        <th style="border:1px solid #000; padding:6px; width:14%;">규격</th>
+        <th style="border:1px solid #000; padding:6px; width:12%;">수량</th>
+        <th style="border:1px solid #000; padding:6px; width:14%;">단가</th>
+        <th style="border:1px solid #000; padding:6px; width:18%;">공급가액</th>
+        <th style="border:1px solid #000; padding:6px; width:12%;">비고</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsHtml}
+    </tbody>
+    <tfoot>
+      <tr style="background:#f9f9f9; font-weight:bold;">
+        <td colspan="3" style="border:1px solid #000; padding:8px; text-align:center;">합계 금액 (공급가액 총합)</td>
+        <td style="border:1px solid #000; padding:8px; text-align:right;">${data.totalQtyText}</td>
+        <td style="border:1px solid #000; padding:8px;">-</td>
+        <td style="border:1px solid #000; padding:8px; text-align:right; font-size:11pt; color:#000;">${data.totalAmountText}</td>
+        <td style="border:1px solid #000; padding:8px;"></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- 입금 계좌 -->
+  <div style="border:1px solid #000; padding:8px; background:#fafafa; margin-top:10px;">
+    <b>🏦 입금 계좌 안내:</b> ${data.bankInfo}
+  </div>
+</body>
+</html>`;
+
+  const blob = new Blob([hwpContent], { type: 'application/x-hwp;charset=utf-8' });
+  const safeCustName = data.customerName.replace(/[^a-zA-Z0-9가-힣]/g, '_');
+  const filename = `거래명세서_${safeCustName}_${data.issueDate}.hwp`;
+
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+};
+
+// 4. 거래명세서 화면에서 수정한 내용 판매 대장 DB에 영구 반영 저장
+window.saveStatementChangesToSales = async function() {
+  const tbody = document.getElementById('statement-items-body');
+  if (!tbody) return;
+
+  const rows = tbody.querySelectorAll('tr:not(#stmt-empty-row)');
+  if (rows.length === 0) {
+    alert('반영할 거래 내역이 없습니다.');
+    return;
+  }
+
+  const updatedSales = [];
+  let updateCount = 0;
+
+  // 역매핑 (라벨 -> productType 코드)
+  const labelToType = {
+    '1818': '1818',
+    '1818t': '1818t',
+    '3030': '3030',
+    '3030t': '3030t',
+    '4060': '4060',
+    '평당': 'pyeong',
+    'pyeong': 'pyeong',
+    '기타': 'extra'
+  };
+
+  rows.forEach(row => {
+    const saleId = row.dataset.saleId;
+    if (!saleId) return; // 수기 추가 행(DB 미연동)은 제외
+
+    const sale = state.sales.find(s => s.id === saleId);
+    if (!sale) return;
+
+    const cells = row.querySelectorAll('td');
+    if (cells.length < 7) return;
+
+    const specText = cells[2].textContent.trim();
+    const qty = Number(cells[3].textContent.replace(/[^0-9]/g, '')) || 0;
+    const price = Number(cells[4].textContent.replace(/[^0-9]/g, '')) || 0;
+    const notesText = cells[6].textContent.trim();
+
+    let changed = false;
+    if (sale.quantity !== qty) {
+      sale.quantity = qty;
+      changed = true;
+    }
+    if (sale.price !== price) {
+      sale.price = price;
+      changed = true;
+    }
+    if (labelToType[specText] && sale.productType !== labelToType[specText]) {
+      sale.productType = labelToType[specText];
+      changed = true;
+    }
+    if (notesText && sale.notes !== notesText) {
+      sale.notes = notesText;
+      changed = true;
+    }
+
+    if (changed) {
+      // 수금 완료 상태 재계산
+      const totalAmount = sale.quantity * sale.price;
+      const collectedAmount = (sale.payments || []).reduce((sum, p) => sum + p.amount, 0);
+      sale.isCollected = collectedAmount >= totalAmount;
+
+      updatedSales.push(sale);
+      updateCount++;
+    }
+  });
+
+  if (updateCount === 0) {
+    alert('판매 대장에 변경할 수정 내역이 없거나, 이미 최신 상태입니다.\n(새로 직접 타이핑하여 수량이나 단가, 규격을 변경한 후 클릭해 주세요)');
+    return;
+  }
+
+  const confirmSave = confirm(`거래명세서에서 수정한 ${updateCount}건의 내역을 실제 판매 대장 데이터에도 반영하여 저장하시겠습니까?`);
+  if (!confirmSave) return;
+
+  const btn = document.getElementById('btn-save-stmt-sales');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> 저장 중...`;
+  }
+
+  try {
+    saveState();
+    for (const sale of updatedSales) {
+      if (typeof pushSale === 'function') {
+        await pushSale(sale);
+      }
+    }
+    renderAll();
+    alert(`성공적으로 ${updateCount}건의 거래 내역이 판매 대장에 저장되었습니다!`);
+  } catch (err) {
+    console.error('명세서 변경사항 저장 실패:', err);
+    alert('저장 도중 오류가 발생했습니다: ' + (err.message || err));
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<i data-lucide="save" class="w-3.5 h-3.5"></i> 장부 반영 저장`;
+      if (window.lucide) window.lucide.createIcons();
+    }
+  }
 };
 
 // =========================================================================
