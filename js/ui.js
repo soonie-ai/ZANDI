@@ -2238,11 +2238,6 @@ function addSaleItemRow() {
   attachAmountFormat(priceInput);
 
   typeSelect.addEventListener('change', () => {
-    const isManualPrice = document.getElementById('sale-manual-price-toggle')?.checked;
-    if (isManualPrice) {
-      calculateTotals();
-      return;
-    }
     const custId = document.getElementById('sale-customer').value;
     const customer = state.customers.find(c => c.id === custId);
     if (customer && customer.prices) {
