@@ -939,6 +939,30 @@ select option {
   font-weight: bold !important;
 }
 
+/* 합계 줄(tfoot) 및 총 수량 셀 스타일: 글씨 굵기를 과하지 않게 일반 크기로 맞추고 여러 규격 텍스트가 잘리지 않고 다 보이도록 줄바꿈 허용 */
+#statement-table tfoot td {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  word-break: keep-all !important;
+  font-size: 11px !important;
+  font-weight: normal !important; /* 굵지 않고 다른 것과 같게 */
+  padding: 6px 4px !important;
+}
+
+#stmt-total-qty {
+  white-space: normal !important;
+  word-break: keep-all !important;
+  line-height: 1.35 !important;
+  font-weight: normal !important; /* 다른 것과 동일한 두께 */
+  font-size: 11px !important;
+}
+
+#stmt-total-amount {
+  font-size: 13px !important;
+  font-weight: bold !important;
+}
+
 /* =============================================
    🖨️ 거래명세서 전용 프린트 미디어 쿼리
    ============================================= */
