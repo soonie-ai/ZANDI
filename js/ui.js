@@ -3343,8 +3343,10 @@ function getStatementCurrentData() {
       const spec = cells[2].textContent.trim();
       const qty = Number(cells[3].textContent.replace(/[^0-9]/g, '')) || 0;
       const price = Number(cells[4].textContent.replace(/[^0-9]/g, '')) || 0;
-      const amount = qty * price;
-      const notes = cells[6].textContent.trim();
+      // 화면의 공급가액 칸에 적혀있는 금액을 우선 그대로 읽어옴 (수량*단가 또는 직접 타이핑한 임의 금액 모두 100% 반영)
+      const rawAmount = Number(cells[5].textContent.replace(/[^0-9]/g, ''));
+      const amount = (rawAmount > 0) ? rawAmount : (qty * price);
+      const notes = cells[6] ? cells[6].textContent.trim() : '';
       const saleId = tr.dataset.saleId || '';
 
       rows.push({ saleId, date, name, spec, qty, price, amount, notes });
