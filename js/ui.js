@@ -3017,9 +3017,9 @@ window.openStatementModal = function() {
       <td class="border-r border-black p-1.5" contenteditable="true">${dateStr}</td>
       <td class="border-r border-black p-1.5 text-left" contenteditable="true">재배잔디</td>
       <td class="border-r border-black p-1.5 text-center" contenteditable="true">${specName}</td>
-      <td class="border-r border-black p-1.5 text-right font-semibold" contenteditable="true" oninput="recalculateStatement()">${sale.quantity.toLocaleString()}</td>
-      <td class="border-r border-black p-1.5 text-right" contenteditable="true" oninput="recalculateStatement()">${sale.price.toLocaleString()}</td>
-      <td class="border-r border-black p-1.5 text-right font-bold stmt-row-total">${total.toLocaleString()}원</td>
+      <td class="border-r border-black p-1.5 text-right font-semibold" contenteditable="true" oninput="recalculateStatement(this)">${sale.quantity.toLocaleString()}</td>
+      <td class="border-r border-black p-1.5 text-right" contenteditable="true" oninput="recalculateStatement(this)">${sale.price.toLocaleString()}</td>
+      <td class="border-r border-black p-1.5 text-right font-bold stmt-row-total" contenteditable="true" oninput="recalculateStatement(this)">${total.toLocaleString()}원</td>
       <td class="border-r border-black p-1.5 text-left" contenteditable="true"></td>
       <td class="p-1.5 no-print">
         <button onclick="deleteStatementRow(this)" class="text-rose-600 hover:text-rose-800 font-bold">X</button>
@@ -3121,9 +3121,9 @@ window.clearStatementItems = function() {
       <td class="border-r border-black p-1.5" contenteditable="true">${i === 0 ? dateStr : ''}</td>
       <td class="border-r border-black p-1.5 text-left" contenteditable="true">재배잔디</td>
       <td class="border-r border-black p-1.5 text-center" contenteditable="true"></td>
-      <td class="border-r border-black p-1.5 text-right font-semibold" contenteditable="true" oninput="recalculateStatement()"></td>
-      <td class="border-r border-black p-1.5 text-right" contenteditable="true" oninput="recalculateStatement()"></td>
-      <td class="border-r border-black p-1.5 text-right font-bold stmt-row-total">0원</td>
+      <td class="border-r border-black p-1.5 text-right font-semibold" contenteditable="true" oninput="recalculateStatement(this)"></td>
+      <td class="border-r border-black p-1.5 text-right" contenteditable="true" oninput="recalculateStatement(this)"></td>
+      <td class="border-r border-black p-1.5 text-right font-bold stmt-row-total" contenteditable="true" oninput="recalculateStatement(this)">0원</td>
       <td class="border-r border-black p-1.5 text-left" contenteditable="true"></td>
       <td class="p-1.5 no-print">
         <button onclick="deleteStatementRow(this)" class="text-rose-600 hover:text-rose-800 font-bold">X</button>
@@ -3151,9 +3151,9 @@ window.addStatementRow = function() {
     <td class="border-r border-black p-1.5" contenteditable="true">${dateStr}</td>
     <td class="border-r border-black p-1.5 text-left" contenteditable="true">재배잔디</td>
     <td class="border-r border-black p-1.5 text-center" contenteditable="true"></td>
-    <td class="border-r border-black p-1.5 text-right font-semibold" contenteditable="true" oninput="recalculateStatement()"></td>
-    <td class="border-r border-black p-1.5 text-right" contenteditable="true" oninput="recalculateStatement()"></td>
-    <td class="border-r border-black p-1.5 text-right font-bold stmt-row-total">0원</td>
+    <td class="border-r border-black p-1.5 text-right font-semibold" contenteditable="true" oninput="recalculateStatement(this)"></td>
+    <td class="border-r border-black p-1.5 text-right" contenteditable="true" oninput="recalculateStatement(this)"></td>
+    <td class="border-r border-black p-1.5 text-right font-bold stmt-row-total" contenteditable="true" oninput="recalculateStatement(this)">0원</td>
     <td class="border-r border-black p-1.5 text-left" contenteditable="true"></td>
     <td class="p-1.5 no-print">
       <button onclick="deleteStatementRow(this)" class="text-rose-600 hover:text-rose-800 font-bold">X</button>
@@ -3177,8 +3177,9 @@ window.deleteStatementRow = function(btn) {
   }
 };
 
-window.recalculateStatement = function() {
+window.recalculateStatement = function(targetCell) {
   const tbody = document.getElementById('statement-items-body');
+  if (!tbody) return;
   const rows = tbody.querySelectorAll('tr:not(#stmt-empty-row)');
   
   let totalAmount = 0;
@@ -3192,19 +3193,25 @@ window.recalculateStatement = function() {
     const specName = cells[2].textContent.trim() || '미지정';
     const qtyStr = cells[3].textContent.replace(/[^0-9]/g, '');
     const priceStr = cells[4].textContent.replace(/[^0-9]/g, '');
+    const amountStr = cells[5].textContent.replace(/[^0-9]/g, '');
 
     const qty = Number(qtyStr) || 0;
     const price = Number(priceStr) || 0;
-    const rowTotal = qty * price;
+    
+    // 만약 공급가액 칸(cells[5])을 직접 타이핑해서 수정 중인 경우 그 금액을 우선 사용
+    let rowTotal = 0;
+    if (targetCell && targetCell === cells[5]) {
+      rowTotal = Number(amountStr) || 0;
+    } else {
+      rowTotal = (qty > 0 && price > 0) ? (qty * price) : (Number(amountStr) || 0);
+      cells[5].textContent = `${rowTotal.toLocaleString()}원`;
+    }
 
     totalAmount += rowTotal;
 
     if (qty > 0) {
       qtyMap[specName] = (qtyMap[specName] || 0) + qty;
     }
-
-    // 개별 행 총액 업데이트
-    cells[5].textContent = `${rowTotal.toLocaleString()}원`;
   });
 
   // 규격별 수량 취합 문자열 생성
