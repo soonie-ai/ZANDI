@@ -2238,6 +2238,11 @@ function addSaleItemRow() {
   attachAmountFormat(priceInput);
 
   typeSelect.addEventListener('change', () => {
+    const isManualPrice = document.getElementById('sale-manual-price-toggle')?.checked;
+    if (isManualPrice) {
+      calculateTotals();
+      return;
+    }
     const custId = document.getElementById('sale-customer').value;
     const customer = state.customers.find(c => c.id === custId);
     if (customer && customer.prices) {
@@ -3043,6 +3048,93 @@ window.closeStatementModal = function() {
   document.getElementById('statement-modal').classList.add('hidden');
 };
 
+// 빈 거래명세서 열기 (완전 수기 작성용)
+window.openBlankStatementModal = function() {
+  // 모달 기본 설정 (공급자 및 금융 정보 LocalStorage 불러오기)
+  const editableFields = [
+    'stmt-supplier-no', 'stmt-supplier-name', 'stmt-supplier-owner', 
+    'stmt-supplier-addr', 'stmt-supplier-phone', 'stmt-bank-info'
+  ];
+  editableFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      let saved = localStorage.getItem(`zandi_stmt_v2_${id}`);
+      if (id === 'stmt-supplier-owner') {
+        if (!saved || !saved.includes('문병선')) {
+          saved = '유수경, 문병선';
+          localStorage.setItem(`zandi_stmt_v2_${id}`, saved);
+        }
+      }
+      if (saved !== null) {
+        el.textContent = saved;
+      }
+      el.onblur = () => {
+        localStorage.setItem(`zandi_stmt_v2_${id}`, el.textContent.trim());
+      };
+    }
+  });
+
+  // 거래처명 및 날짜 빈 양식용 기본값 설정 (클릭하여 직접 수정 가능)
+  const filterCustId = document.getElementById('filter-sale-customer')?.value;
+  const filterCust = state.customers.find(c => c.id === filterCustId);
+  document.getElementById('stmt-customer-name').textContent = filterCust ? `${filterCust.name} 귀하` : '거래처명 입력 귀하';
+  document.getElementById('stmt-issue-date').textContent = new Date().toISOString().split('T')[0];
+  document.getElementById('stmt-action-type').textContent = '아래와 같이 청구합니다.';
+
+  // 캡처 토글 리셋
+  const toggleCheckbox = document.getElementById('stmt-toggle-delete');
+  if (toggleCheckbox) toggleCheckbox.checked = false;
+  toggleStatementDeleteColumn(false);
+
+  // 규격 필터 버튼 '전체'로 초기화
+  const filterContainer = document.getElementById('stmt-spec-filter-container');
+  if (filterContainer) {
+    const buttons = filterContainer.querySelectorAll('.stmt-spec-filter-btn');
+    buttons.forEach(btn => {
+      btn.className = (btn.dataset.spec === 'all') 
+        ? 'stmt-spec-filter-btn px-2.5 py-1 text-[10px] rounded-md bg-zandiPrimary text-black font-semibold transition-all duration-300'
+        : 'stmt-spec-filter-btn px-2.5 py-1 text-[10px] rounded-md text-slate-400 hover:text-white transition-all duration-300';
+    });
+  }
+
+  // 테이블 행을 모두 비우고 수기 입력할 수 있는 빈 행 5개 기본 생성
+  clearStatementItems();
+
+  if (window.lucide) window.lucide.createIcons();
+  document.getElementById('statement-modal').classList.remove('hidden');
+};
+
+// 명세서 테이블 행 모두 비우고 빈 행 생성
+window.clearStatementItems = function() {
+  const tbody = document.getElementById('statement-items-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const today = new Date();
+  const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
+
+  // 수기 작성이 편하도록 5개의 빈 행 생성
+  for (let i = 0; i < 5; i++) {
+    const tr = document.createElement('tr');
+    tr.className = 'border-b border-black';
+    tr.innerHTML = `
+      <td class="border-r border-black p-1.5" contenteditable="true">${i === 0 ? dateStr : ''}</td>
+      <td class="border-r border-black p-1.5 text-left" contenteditable="true">재배잔디</td>
+      <td class="border-r border-black p-1.5 text-center" contenteditable="true"></td>
+      <td class="border-r border-black p-1.5 text-right font-semibold" contenteditable="true" oninput="recalculateStatement()"></td>
+      <td class="border-r border-black p-1.5 text-right" contenteditable="true" oninput="recalculateStatement()"></td>
+      <td class="border-r border-black p-1.5 text-right font-bold stmt-row-total">0원</td>
+      <td class="border-r border-black p-1.5 text-left" contenteditable="true"></td>
+      <td class="p-1.5 no-print">
+        <button onclick="deleteStatementRow(this)" class="text-rose-600 hover:text-rose-800 font-bold">X</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  recalculateStatement();
+};
+
 window.addStatementRow = function() {
   const tbody = document.getElementById('statement-items-body');
   
@@ -3050,14 +3142,17 @@ window.addStatementRow = function() {
   const emptyRow = document.getElementById('stmt-empty-row');
   if (emptyRow) emptyRow.remove();
 
+  const today = new Date();
+  const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
+
   const tr = document.createElement('tr');
   tr.className = 'border-b border-black';
   tr.innerHTML = `
-    <td class="border-r border-black p-1.5" contenteditable="true"></td>
+    <td class="border-r border-black p-1.5" contenteditable="true">${dateStr}</td>
     <td class="border-r border-black p-1.5 text-left" contenteditable="true">재배잔디</td>
     <td class="border-r border-black p-1.5 text-center" contenteditable="true"></td>
-    <td class="border-r border-black p-1.5 text-right font-semibold" contenteditable="true" oninput="recalculateStatement()">0</td>
-    <td class="border-r border-black p-1.5 text-right" contenteditable="true" oninput="recalculateStatement()">0</td>
+    <td class="border-r border-black p-1.5 text-right font-semibold" contenteditable="true" oninput="recalculateStatement()"></td>
+    <td class="border-r border-black p-1.5 text-right" contenteditable="true" oninput="recalculateStatement()"></td>
     <td class="border-r border-black p-1.5 text-right font-bold stmt-row-total">0원</td>
     <td class="border-r border-black p-1.5 text-left" contenteditable="true"></td>
     <td class="p-1.5 no-print">

@@ -282,15 +282,18 @@ function initForms() {
     document.getElementById('customer-form').reset();
   });
 
-  // 2) 판매 등록시 거래처 선택에 따른 모든 품목 단가 일괄 업데이트
+  // 2) 판매 등록시 거래처 선택에 따른 품목 단가 업데이트 (직접입력 유지 옵션 지원)
   document.getElementById('sale-customer').addEventListener('change', () => {
     const custId = document.getElementById('sale-customer').value;
     const customer = state.customers.find(c => c.id === custId);
+    const isManualPrice = document.getElementById('sale-manual-price-toggle')?.checked;
     
     const rows = document.querySelectorAll('.sale-item-row');
     rows.forEach(row => {
       const typeSelect = row.querySelector('.item-product-type');
       const priceInput = row.querySelector('.item-price');
+      // 사용자가 직접 입력 유지를 켰거나 이미 임의 금액을 입력한 행은 덮어쓰지 않음
+      if (isManualPrice) return;
       if (customer && customer.prices) {
         priceInput.value = formatAmountInput(String(customer.prices[typeSelect.value] || 0));
       } else {
